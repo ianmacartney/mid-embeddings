@@ -1,8 +1,8 @@
-import { createLazyFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { SignInForm } from "@/SignInForm";
 import { Authenticated, Unauthenticated } from "convex/react";
 
-export const Route = createLazyFileRoute("/")({
+export const Route = createFileRoute("/")({
   component: () => (
     <>
       <Authenticated>hi</Authenticated>
