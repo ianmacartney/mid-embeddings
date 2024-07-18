@@ -7,6 +7,19 @@ import { authTables } from "@convex-dev/auth/server";
 // The schema provides more precise TypeScript types.
 export default defineSchema({
   ...authTables,
+  users: defineTable(
+    v.union(
+      v.object({
+        isAnonymous: v.literal(true),
+      }),
+      v.object({
+        isAnonymous: v.literal(false),
+        name: v.string(),
+        email: v.string(),
+        image: v.string(),
+      }),
+    ),
+  ),
   messages: defineTable({
     userId: v.id("users"),
     body: v.string(),
