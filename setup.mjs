@@ -11,7 +11,14 @@ import { spawnSync } from "child_process";
 
 if (!fs.existsSync(".env.local")) {
   // Something is off, skip the script.
-  process.exit(0);
+  const result = spawnSync("npx", ["convex", "dev", "--until-success"], {
+    stdio: "inherit",
+  });
+  if (result.status !== 0) {
+    console.error("Failed to run `npx convex dev --until-success`.");
+    console.error("Run it again to continue setting up Convex.");
+    process.exit(result.status);
+  }
 }
 
 const config = {};
