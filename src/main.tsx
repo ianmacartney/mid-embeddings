@@ -5,6 +5,9 @@ import { ThemeProvider } from "next-themes";
 import { ConvexReactClient } from "convex/react";
 import App from "./App.tsx";
 import "./index.css";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+dayjs.extend(relativeTime);
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 

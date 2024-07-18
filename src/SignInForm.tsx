@@ -44,7 +44,15 @@ function SignInAnonymously() {
       className="flex-1"
       variant="outline"
       type="button"
-      onClick={() => void signIn("anonymous")}
+      onClick={() =>
+        void signIn("anonymous").catch((e) => {
+          toast({
+            title: "Too many users being created.",
+            description:
+              "Log in with GitHub or retry " + dayjs(e.data.retryAt).fromNow(),
+          });
+        })
+      }
     >
       Continue as a guest
       <Toaster />
