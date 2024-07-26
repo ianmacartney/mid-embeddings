@@ -34,7 +34,11 @@ module.exports = {
     // Only warn on unused variables, and ignore variables starting with `_`
     "@typescript-eslint/no-unused-vars": [
       "warn",
-      { varsIgnorePattern: "^_", argsIgnorePattern: "^_" },
+      {
+        varsIgnorePattern: "^_",
+        argsIgnorePattern: "^_",
+        importsIgnorePattern: ".*", // I'm fine with unused imports for now
+      },
     ],
 
     // Allow escaping the compiler
