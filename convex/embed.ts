@@ -10,12 +10,22 @@ import {
   internalQuery,
   mutation,
   query,
+  QueryCtx,
 } from "./_generated/server";
 import schema from "./schema";
 import words from "./words.json";
 import { getManyFrom, getOneFrom } from "convex-helpers/server/relationships";
-import { migrate, userAction, userMutation } from "./functions";
+import {
+  migrate,
+  namespaceAdminAction,
+  namespaceAdminQuery,
+  userAction,
+  userMutation,
+} from "./functions";
 import { dotProduct, getMidpoint } from "./linearAlgebra";
+import { paginationOptsValidator } from "convex/server";
+import { pick } from "convex-helpers";
+import { asyncMap } from "convex-helpers";
 
 export const createNamespace = userMutation({
   args: schema.tables.namespaces.validator.fields,
@@ -29,15 +39,148 @@ export const createNamespace = userMutation({
   },
 });
 
-export const addTextToNamespace = action({
-  args: {},
-  handler: async (ctx, args) => {},
+export const addTextToNamespace = namespaceAdminAction({
+  args: {
+    titled: v.optional(
+      v.array(v.object({ title: v.string(), text: v.string() })),
+    ),
+    texts: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const texts = args.titled || [];
+    texts.concat((args.texts || []).map((text) => ({ text, title: text })));
+    const indexesToEmbed = await ctx.runMutation(
+      internal.embed.populateTextsFromCache,
+      {
+        namespaceId: ctx.namespace._id,
+        texts,
+      },
+    );
+    const chunks = [];
+    for (let i = 0; i < indexesToEmbed.length; i += 100) {
+      chunks.push(indexesToEmbed.slice(i, i + 100));
+    }
+    await Promise.all(
+      chunks.map(async (chunk) => {
+        const embeddings = await embedBatch(chunk.map((i) => texts[i].text));
+        const toInsert = embeddings.map((embedding, i) => {
+          const { title, text } = texts[chunk[i]];
+          return { title, text, embedding };
+        });
+        await ctx.runMutation(internal.embed.insertTexts, {
+          namespaceId: ctx.namespace._id,
+          texts: toInsert,
+        });
+      }),
+    );
+  },
 });
-// add text: embed missing ones in batch
 
-// query within a namespace
+export async function getTextByTitle(
+  ctx: QueryCtx,
+  namespaceId: Id<"namespaces">,
+  title: string,
+) {
+  return ctx.db
+    .query("texts")
+    .withIndex("namespaceId", (q) =>
+      q.eq("namespaceId", namespaceId).eq("title", title),
+    )
+    .unique();
+}
 
-// make a guess
+export const populateTextsFromCache = internalMutation({
+  args: {
+    namespaceId: v.id("namespaces"),
+    texts: v.array(v.object({ title: v.string(), text: v.string() })),
+  },
+  handler: async (ctx, args) => {
+    const missingIndexes = await Promise.all(
+      args.texts.map(async ({ title, text }, index) => {
+        const existing = await getTextByTitle(ctx, args.namespaceId, title);
+        if (existing && existing.text === text) return null;
+        const matching = await getOneFrom(ctx.db, "texts", "text", text);
+        if (!matching) return index; // we need to embed this text
+        const embedding = await ctx.db.get(matching.embeddingId);
+        if (!embedding) {
+          throw new Error("Missing embedding for text" + matching._id);
+        }
+        // We can copy over from a matching text
+        if (existing) {
+          await ctx.db.patch(existing._id, { text });
+          await ctx.db.patch(existing.embeddingId, {
+            embedding: embedding.embedding,
+          });
+        } else {
+          const embeddingId = await ctx.db.insert("embeddings", {
+            namespaceId: args.namespaceId,
+            embedding: embedding.embedding,
+          });
+          await ctx.db.insert("texts", {
+            namespaceId: args.namespaceId,
+            title,
+            text,
+            embeddingId,
+          });
+        }
+        return null;
+      }),
+    );
+    return missingIndexes.flatMap((m, i) => (m === null ? [] : [i]));
+  },
+});
+
+export const insertTexts = internalMutation({
+  args: {
+    namespaceId: v.id("namespaces"),
+    texts: v.array(
+      v.object({
+        title: v.string(),
+        text: v.string(),
+        embedding: v.array(v.number()),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const namespaceId = args.namespaceId;
+    await asyncMap(args.texts, async ({ title, text, embedding }) => {
+      const existing = await getTextByTitle(ctx, namespaceId, title);
+      if (existing) {
+        await ctx.db.patch(existing._id, { text });
+        await ctx.db.patch(existing.embeddingId, { embedding });
+      } else {
+        const embeddingId = await ctx.db.insert("embeddings", {
+          namespaceId,
+          embedding,
+        });
+        await ctx.db.insert("texts", {
+          namespaceId,
+          title,
+          text,
+          embeddingId,
+        });
+      }
+    });
+  },
+});
+
+export const paginateText = namespaceAdminQuery({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query("texts")
+      .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
+      .paginate(args.paginationOpts);
+  },
+});
+
+/**
+ *
+ *
+ * OLD
+ *
+ *
+ */
 
 export const filterMissing = internalQuery({
   args: { feels: v.array(v.string()) },

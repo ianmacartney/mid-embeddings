@@ -8,6 +8,7 @@ import {
   internalQuery,
   mutation,
   query,
+  QueryCtx,
 } from "./_generated/server";
 import {
   getAll,
@@ -20,7 +21,6 @@ import { pick } from "convex-helpers";
 import {
   namespaceAdminMutation,
   namespaceAdminQuery,
-  runWithRetries,
   userAction,
   userMutation,
   userQuery,
@@ -33,8 +33,9 @@ import {
   getMidpoint,
   vectorLength,
 } from "./linearAlgebra";
-import { paginationOptsValidator } from "convex/server";
 import { omit } from "convex-helpers";
+import { getTextByTitle } from "./embed";
+import { paginationOptsValidator } from "convex/server";
 
 export const listGamesByNamespace = query({
   args: { namespaceId: v.id("namespaces") },
@@ -44,8 +45,12 @@ export const listGamesByNamespace = query({
       async (game) => {
         const midpoint = await ctx.db.get(game.midpointId);
         if (!midpoint) return null;
-        const left = await ctx.db.get(midpoint.leftId);
-        const right = await ctx.db.get(midpoint.rightId);
+        const left = await getTextByTitle(ctx, game.namespaceId, midpoint.left);
+        const right = await getTextByTitle(
+          ctx,
+          game.namespaceId,
+          midpoint.right,
+        );
         if (!left || !right) return null;
         return {
           _id: game._id,
@@ -53,17 +58,7 @@ export const listGamesByNamespace = query({
           right: right.title,
         };
       },
-    );
-  },
-});
-
-export const paginateText = namespaceAdminQuery({
-  args: { paginationOpts: paginationOptsValidator },
-  handler: async (ctx, args) => {
-    return ctx.db
-      .query("texts")
-      .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
-      .paginate(args.paginationOpts);
+    ).then((games) => games.flatMap((g) => (g === null ? [] : [g])));
   },
 });
 
@@ -79,14 +74,40 @@ export const makeGame = namespaceAdminMutation({
   },
 });
 
-export const makeMidpoint = namespaceAdminMutation({
+export const listMidpoints = namespaceAdminQuery({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query("midpoints")
+      .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
+      .order("desc")
+      .paginate(args.paginationOpts);
+  },
+});
+
+export const calculateMidpoint = namespaceAdminMutation({
   args: {
-    leftId: v.id("texts"),
-    rightId: v.id("texts"),
+    left: v.string(),
+    right: v.string(),
+    skipCache: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    if (!args.skipCache) {
+      const existing = await ctx.db
+        .query("midpoints")
+        .withIndex("namespaceId", (q) =>
+          q
+            .eq("namespaceId", ctx.namespace._id)
+            .eq("left", args.left)
+            .eq("right", args.right),
+        )
+        .order("desc")
+        .first();
+      if (existing) return existing;
+    }
     // check that the texts are in the same namespace
-    const [left, right] = await getAll(ctx.db, [args.leftId, args.rightId]);
+    const left = await getTextByTitle(ctx, ctx.namespace._id, args.left);
+    const right = await getTextByTitle(ctx, ctx.namespace._id, args.right);
     if (
       left?.namespaceId !== ctx.namespace._id ||
       right?.namespaceId !== ctx.namespace._id
@@ -102,11 +123,9 @@ export const makeMidpoint = namespaceAdminMutation({
       rightEmbedding.embedding,
     );
 
-    await runWithRetries(ctx, internal.game.findMidpointMatches, {
+    await ctx.scheduler.runAfter(0, internal.game.findMidpointMatches, {
       ...args,
       midpointEmbedding,
-      leftId: args.leftId,
-      rightId: args.rightId,
     });
   },
 });
@@ -148,7 +167,7 @@ export const insertMidpoint = internalMutation({
           embeddingId,
         );
         if (!text) throw new Error("Text not found");
-        return { title: text.title, textId: text._id, score };
+        return { title: text.title, score };
       },
     );
     await ctx.db.insert("midpoints", { ...args, topMatches });
@@ -205,9 +224,9 @@ export const addGuess = internalMutation({
     if (!midpoint) throw new Error("Midpoint not found");
     const score = dotProduct(midpoint.midpointEmbedding, args.embedding);
     const [leftDistance, rightDistance] = await Promise.all(
-      [midpoint.leftId, midpoint.rightId].map(async (id) => {
-        const text = await ctx.db.get(id);
-        if (!text) throw new Error("Text not found: " + id);
+      [midpoint.left, midpoint.right].map(async (title) => {
+        const text = await getTextByTitle(ctx, game.namespaceId, title);
+        if (!text) throw new Error("Midpoint text not found: " + title);
         const leftEmbedding = await ctx.db.get(text.embeddingId);
         if (!leftEmbedding) throw new Error("Left embedding not found");
         return vectorLength(

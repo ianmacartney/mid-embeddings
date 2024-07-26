@@ -51,13 +51,11 @@ export default defineSchema({
 
   midpoints: defineTable({
     namespaceId: v.id("namespaces"),
-    leftId: v.id("texts"),
-    rightId: v.id("texts"),
+    left: v.string(), // titles
+    right: v.string(),
     midpointEmbedding: v.array(v.number()),
-    topMatches: v.array(
-      v.object({ textId: v.id("texts"), title: v.string(), score: v.number() }),
-    ),
-  }),
+    topMatches: v.array(v.object({ title: v.string(), score: v.number() })),
+  }).index("namespaceId", ["namespaceId", "left", "right"]),
 
   games: defineTable({
     namespaceId: v.id("namespaces"),
