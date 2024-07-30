@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
-import { Doc, Id } from "./_generated/dataModel";
+import { DataModel, Doc, Id } from "./_generated/dataModel";
 import {
   action,
+  DatabaseReader,
   internalAction,
   internalMutation,
   internalQuery,
@@ -19,6 +20,7 @@ import {
 import { auth } from "./auth";
 import { makeActionRetrier } from "convex-helpers/server/retries";
 import { makeMigration } from "convex-helpers/server/migrations";
+import { TableNamesInDataModel } from "convex/server";
 
 export const { runWithRetries, retry } = makeActionRetrier("functions:retry");
 export const migrate = makeMigration(internalMutation, {
@@ -120,3 +122,25 @@ export const namespaceAdminAction = customAction(action, {
     };
   },
 });
+
+export type Result<T> =
+  | { value: T; error: undefined }
+  | { value: undefined; error: string };
+
+export function error(message: string) {
+  return { ok: false as const, value: undefined, error: message };
+}
+
+export function ok<T>(value: T) {
+  return { ok: true as const, value, error: undefined };
+}
+
+export async function getOrThrow<
+  Table extends TableNamesInDataModel<DataModel>,
+>(ctx: { db: DatabaseReader }, id: Id<Table>): Promise<Doc<Table>> {
+  const doc = await ctx.db.get(id);
+  if (!doc) {
+    throw new Error(`Could not find id ${id}`);
+  }
+  return doc;
+}

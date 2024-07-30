@@ -25,6 +25,7 @@ export function SignInForm() {
 
 export function SignInWithGitHub() {
   const { signIn } = useAuthActions();
+  // TODO: redirect back to the current page after sign in
   return (
     <Button
       className="flex-1"

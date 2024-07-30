@@ -60,11 +60,11 @@ export default defineSchema({
   games: defineTable({
     namespaceId: v.id("namespaces"),
     midpointId: v.id("midpoints"),
-    // active: v.boolean(),
+    active: v.boolean(),
     // scheduledStarterId: v.id("_scheduled_functions"),
     // endedAt: v.union(v.number(), v.null()),
-    // }).index("namespaceId", ["namespaceId", "active"]),
-  }).index("namespaceId", ["namespaceId"]),
+  }).index("namespaceId", ["namespaceId", "active"]),
+  // }).index("namespaceId", ["namespaceId"]),
   guesses: defineTable({
     gameId: v.id("games"),
     userId: v.id("users"),

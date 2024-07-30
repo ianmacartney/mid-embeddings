@@ -19,8 +19,11 @@ import {
 import { asyncMap } from "convex-helpers";
 import { pick } from "convex-helpers";
 import {
+  error,
+  getOrThrow,
   namespaceAdminMutation,
   namespaceAdminQuery,
+  ok,
   userAction,
   userMutation,
   userQuery,
@@ -62,6 +65,48 @@ export const listGamesByNamespace = query({
   },
 });
 
+export const getDailyGame = query({
+  args: { namespace: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const namespaceName = args.namespace ?? "feelings";
+    const namespace = await ctx.db
+      .query("namespaces")
+      .withIndex("name", (q) => q.eq("name", namespaceName))
+      .unique();
+    if (!namespace) {
+      console.error("Namespace not found: " + namespaceName);
+      return error("Namespace not found");
+    }
+    const game = await ctx.db
+      .query("games")
+      .withIndex("namespaceId", (q) =>
+        q.eq("namespaceId", namespace._id).eq("active", true),
+      )
+      .order("desc")
+      .first();
+    if (!game) {
+      console.error("No active games found");
+      return error("No active games found");
+    }
+    // TODO: if future games are invite-only / not public, check access
+    const midpoint = await getOrThrow(ctx, game.midpointId);
+    return ok({
+      ...namespace,
+      gameId: game._id,
+      ...pick(midpoint, ["left", "right"]),
+    });
+  },
+});
+
+export const getGame = query({
+  args: { gameId: v.id("games") },
+  handler: async (ctx, args) => {
+    const game = await getOrThrow(ctx, args.gameId);
+    const midpoint = await getOrThrow(ctx, game.midpointId);
+    return ok(pick(midpoint, ["left", "right"]));
+  },
+});
+
 export const makeGame = namespaceAdminMutation({
   args: {
     midpointId: v.id("midpoints"),
@@ -70,6 +115,7 @@ export const makeGame = namespaceAdminMutation({
     return ctx.db.insert("games", {
       namespaceId: ctx.namespace._id,
       midpointId: args.midpointId,
+      active: false,
     });
   },
 });
@@ -218,17 +264,14 @@ export const addGuess = internalMutation({
     embedding: v.array(v.number()),
   },
   handler: async (ctx, args) => {
-    const game = await ctx.db.get(args.gameId);
-    if (!game) throw new Error("Game not found");
-    const midpoint = await ctx.db.get(game.midpointId);
-    if (!midpoint) throw new Error("Midpoint not found");
+    const game = await getOrThrow(ctx, args.gameId);
+    const midpoint = await getOrThrow(ctx, game.midpointId);
     const score = dotProduct(midpoint.midpointEmbedding, args.embedding);
     const [leftDistance, rightDistance] = await Promise.all(
       [midpoint.left, midpoint.right].map(async (title) => {
         const text = await getTextByTitle(ctx, game.namespaceId, title);
         if (!text) throw new Error("Midpoint text not found: " + title);
-        const leftEmbedding = await ctx.db.get(text.embeddingId);
-        if (!leftEmbedding) throw new Error("Left embedding not found");
+        const leftEmbedding = await getOrThrow(ctx, text.embeddingId);
         return vectorLength(
           deltaVector(args.embedding, leftEmbedding.embedding),
         );

@@ -24,7 +24,6 @@ import {
 } from "./functions";
 import { dotProduct, getMidpoint } from "./linearAlgebra";
 import { paginationOptsValidator } from "convex/server";
-import { pick } from "convex-helpers";
 import { asyncMap } from "convex-helpers";
 
 export const createNamespace = userMutation({
