@@ -18,9 +18,9 @@ if [ ! -x ./convex-local-backend ]; then
     if [ "$(uname)" = "Darwin" ]; then
         if [ "$(uname -m)" = "arm64" ]; then
             echo "You now need to right click 'convex-local-backend' and select 'Open'"
-            read -p "Press enter to open this folder"
+            read -r -p "Press enter to open this folder"
             open .
-            read -p "Press enter once you've right-clicked 'convex-local-backend' and clicked 'Open' and answered the dialog"
+            read -r -p "Press enter once you've right-clicked 'convex-local-backend' and clicked 'Open' and answered the dialog"
         fi
     fi
 fi
