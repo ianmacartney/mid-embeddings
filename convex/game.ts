@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { Infer, v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import {
@@ -24,9 +24,11 @@ import {
   namespaceAdminMutation,
   namespaceAdminQuery,
   ok,
+  resultValidator,
   userAction,
   userMutation,
   userQuery,
+  vv,
 } from "./functions";
 import schema from "./schema";
 import { embed } from "./llm";
@@ -41,7 +43,7 @@ import { getTextByTitle } from "./embed";
 import { paginationOptsValidator } from "convex/server";
 
 export const listGamesByNamespace = query({
-  args: { namespaceId: v.id("namespaces") },
+  args: { namespaceId: vv.id("namespaces") },
   handler: async (ctx, args) => {
     return asyncMap(
       getManyFrom(ctx.db, "games", "namespaceId", args.namespaceId),
@@ -64,6 +66,17 @@ export const listGamesByNamespace = query({
     ).then((games) => games.flatMap((g) => (g === null ? [] : [g])));
   },
 });
+
+const gameValidator = v.object({
+  gameId: vv.id("games"),
+  left: v.string(),
+  right: v.string(),
+  // TODO: doc validator
+  ...schema.tables.namespaces.validator.fields,
+  _id: v.id("namespaces"),
+  _creationTime: v.number(),
+});
+export type GameInfo = Infer<typeof gameValidator>;
 
 export const getDailyGame = query({
   args: { namespace: v.optional(v.string()) },
@@ -96,6 +109,7 @@ export const getDailyGame = query({
       ...pick(midpoint, ["left", "right"]),
     });
   },
+  returns: resultValidator(gameValidator),
 });
 
 export const getGame = query({

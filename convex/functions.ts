@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, Validator } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { DataModel, Doc, Id } from "./_generated/dataModel";
 import {
@@ -20,7 +20,13 @@ import {
 import { auth } from "./auth";
 import { makeActionRetrier } from "convex-helpers/server/retries";
 import { makeMigration } from "convex-helpers/server/migrations";
-import { TableNamesInDataModel } from "convex/server";
+import type {
+  FieldPaths,
+  NamedTableInfo,
+  TableDefinition,
+  TableNamesInDataModel,
+} from "convex/server";
+import schema from "./schema";
 
 export const { runWithRetries, retry } = makeActionRetrier("functions:retry");
 export const migrate = makeMigration(internalMutation, {
@@ -134,6 +140,46 @@ export function error(message: string) {
 export function ok<T>(value: T) {
   return { ok: true as const, value, error: undefined };
 }
+
+export function resultValidator<T extends Validator<any, "required", any>>(
+  value: T,
+) {
+  return v.union(
+    v.object({ ok: v.literal(true), value, error: v.optional(v.null()) }),
+    v.object({
+      ok: v.literal(false),
+      error: v.string(),
+      value: v.optional(v.null()),
+    }),
+  );
+}
+
+function withSystemFields(validator: Validator<any, any, any>): any {
+  switch (validator.kind) {
+    case "union":
+      return v.union(...validator.members.map(withSystemFields));
+    case "object":
+      return v.object({
+        ...validator.fields,
+        _id: v.id("namespaces"),
+        _creationTime: v.number(),
+      });
+  }
+}
+
+export const vv = {
+  id: <Table extends TableNamesInDataModel<DataModel>>(table: Table) =>
+    v.id(table),
+  doc: <Table extends TableNamesInDataModel<DataModel>>(
+    table: Table,
+  ): Validator<
+    Doc<Table>,
+    "required",
+    FieldPaths<NamedTableInfo<DataModel, Table>>
+  > => {
+    return withSystemFields(schema.tables[table].validator);
+  },
+};
 
 export async function getOrThrow<
   Table extends TableNamesInDataModel<DataModel>,
