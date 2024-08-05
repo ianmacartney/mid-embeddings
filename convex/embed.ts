@@ -16,8 +16,8 @@ import schema from "./schema";
 import words from "./words.json";
 import { getManyFrom, getOneFrom } from "convex-helpers/server/relationships";
 import {
+  getOrThrow,
   migrate,
-  namespaceAdminAction,
   namespaceAdminQuery,
   userAction,
   userMutation,
@@ -25,55 +25,6 @@ import {
 import { dotProduct, getMidpoint } from "./linearAlgebra";
 import { paginationOptsValidator } from "convex/server";
 import { asyncMap } from "convex-helpers";
-
-export const createNamespace = userMutation({
-  args: schema.tables.namespaces.validator.fields,
-  handler: async (ctx, args) => {
-    // TODO: check that the user is allowed to create a namespace
-    const existing = await getOneFrom(ctx.db, "namespaces", "name", args.name);
-    if (existing) {
-      throw new Error("Namespace already exists");
-    }
-    return ctx.db.insert("namespaces", args);
-  },
-});
-
-export const addTextToNamespace = namespaceAdminAction({
-  args: {
-    titled: v.optional(
-      v.array(v.object({ title: v.string(), text: v.string() })),
-    ),
-    texts: v.optional(v.array(v.string())),
-  },
-  handler: async (ctx, args) => {
-    const texts = args.titled || [];
-    texts.concat((args.texts || []).map((text) => ({ text, title: text })));
-    const indexesToEmbed = await ctx.runMutation(
-      internal.embed.populateTextsFromCache,
-      {
-        namespaceId: ctx.namespace._id,
-        texts,
-      },
-    );
-    const chunks = [];
-    for (let i = 0; i < indexesToEmbed.length; i += 100) {
-      chunks.push(indexesToEmbed.slice(i, i + 100));
-    }
-    await Promise.all(
-      chunks.map(async (chunk) => {
-        const embeddings = await embedBatch(chunk.map((i) => texts[i].text));
-        const toInsert = embeddings.map((embedding, i) => {
-          const { title, text } = texts[chunk[i]];
-          return { title, text, embedding };
-        });
-        await ctx.runMutation(internal.embed.insertTexts, {
-          namespaceId: ctx.namespace._id,
-          texts: toInsert,
-        });
-      }),
-    );
-  },
-});
 
 export async function getTextByTitle(
   ctx: QueryCtx,
@@ -100,20 +51,15 @@ export const populateTextsFromCache = internalMutation({
         if (existing && existing.text === text) return null;
         const matching = await getOneFrom(ctx.db, "texts", "text", text);
         if (!matching) return index; // we need to embed this text
-        const embedding = await ctx.db.get(matching.embeddingId);
-        if (!embedding) {
-          throw new Error("Missing embedding for text" + matching._id);
-        }
+        const { embedding } = await getOrThrow(ctx, matching.embeddingId);
         // We can copy over from a matching text
         if (existing) {
           await ctx.db.patch(existing._id, { text });
-          await ctx.db.patch(existing.embeddingId, {
-            embedding: embedding.embedding,
-          });
+          await ctx.db.patch(existing.embeddingId, { embedding });
         } else {
           const embeddingId = await ctx.db.insert("embeddings", {
             namespaceId: args.namespaceId,
-            embedding: embedding.embedding,
+            embedding,
           });
           await ctx.db.insert("texts", {
             namespaceId: args.namespaceId,
@@ -160,16 +106,6 @@ export const insertTexts = internalMutation({
         });
       }
     });
-  },
-});
-
-export const paginateText = namespaceAdminQuery({
-  args: { paginationOpts: paginationOptsValidator },
-  handler: async (ctx, args) => {
-    return ctx.db
-      .query("texts")
-      .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
-      .paginate(args.paginationOpts);
   },
 });
 

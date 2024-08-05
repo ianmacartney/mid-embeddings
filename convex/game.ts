@@ -21,6 +21,7 @@ import { pick } from "convex-helpers";
 import {
   error,
   getOrThrow,
+  namespaceAdminAction,
   namespaceAdminMutation,
   namespaceAdminQuery,
   ok,
@@ -31,7 +32,7 @@ import {
   vv,
 } from "./functions";
 import schema from "./schema";
-import { embed } from "./llm";
+import { embed, embedBatch } from "./llm";
 import {
   deltaVector,
   dotProduct,
@@ -121,16 +122,62 @@ export const getGame = query({
   },
 });
 
-export const makeGame = namespaceAdminMutation({
+export const createNamespace = userMutation({
+  args: schema.tables.namespaces.validator.fields,
+  handler: async (ctx, args) => {
+    // TODO: check that the user is allowed to create a namespace
+    const existing = await getOneFrom(ctx.db, "namespaces", "name", args.name);
+    if (existing) {
+      throw new Error("Namespace already exists");
+    }
+    return ctx.db.insert("namespaces", args);
+  },
+});
+
+export const addTextToNamespace = namespaceAdminAction({
   args: {
-    midpointId: v.id("midpoints"),
+    titled: v.optional(
+      v.array(v.object({ title: v.string(), text: v.string() })),
+    ),
+    texts: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    return ctx.db.insert("games", {
-      namespaceId: ctx.namespace._id,
-      midpointId: args.midpointId,
-      active: false,
-    });
+    const texts = args.titled || [];
+    texts.concat((args.texts || []).map((text) => ({ text, title: text })));
+    const indexesToEmbed = await ctx.runMutation(
+      internal.embed.populateTextsFromCache,
+      {
+        namespaceId: ctx.namespace._id,
+        texts,
+      },
+    );
+    const chunks = [];
+    for (let i = 0; i < indexesToEmbed.length; i += 100) {
+      chunks.push(indexesToEmbed.slice(i, i + 100));
+    }
+    await Promise.all(
+      chunks.map(async (chunk) => {
+        const embeddings = await embedBatch(chunk.map((i) => texts[i].text));
+        const toInsert = embeddings.map((embedding, i) => {
+          const { title, text } = texts[chunk[i]];
+          return { title, text, embedding };
+        });
+        await ctx.runMutation(internal.embed.insertTexts, {
+          namespaceId: ctx.namespace._id,
+          texts: toInsert,
+        });
+      }),
+    );
+  },
+});
+
+export const paginateText = namespaceAdminQuery({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query("texts")
+      .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
+      .paginate(args.paginationOpts);
   },
 });
 
@@ -234,6 +281,19 @@ export const insertMidpoint = internalMutation({
   },
 });
 
+export const makeGame = namespaceAdminMutation({
+  args: {
+    midpointId: v.id("midpoints"),
+  },
+  handler: async (ctx, args) => {
+    return ctx.db.insert("games", {
+      namespaceId: ctx.namespace._id,
+      midpointId: args.midpointId,
+      active: false,
+    });
+  },
+});
+
 export const listGuesses = userQuery({
   args: { gameId: v.id("games") },
   handler: async (ctx, args) => {
@@ -260,7 +320,7 @@ export const makeGuess = userAction({
       return;
     }
     const embedding = await embed(args.text);
-    await ctx.runMutation(internal.game.addGuess, {
+    await ctx.runMutation(internal.game.insertGuess, {
       ...args,
       userId,
       embedding,
@@ -270,7 +330,7 @@ export const makeGuess = userAction({
 
 const EPSILON = 0.00001;
 
-export const addGuess = internalMutation({
+export const insertGuess = internalMutation({
   args: {
     gameId: v.id("games"),
     text: v.string(),
