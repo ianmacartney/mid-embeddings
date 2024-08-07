@@ -14,6 +14,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as IndexImport } from './routes/index'
+import { Route as AuthorNamespaceImport } from './routes/author/$namespace'
 
 // Create Virtual Routes
 
@@ -28,6 +29,11 @@ const LoginLazyRoute = LoginLazyImport.update({
 
 const IndexRoute = IndexImport.update({
   path: '/',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AuthorNamespaceRoute = AuthorNamespaceImport.update({
+  path: '/author/$namespace',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -49,12 +55,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginLazyImport
       parentRoute: typeof rootRoute
     }
+    '/author/$namespace': {
+      id: '/author/$namespace'
+      path: '/author/$namespace'
+      fullPath: '/author/$namespace'
+      preLoaderRoute: typeof AuthorNamespaceImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
 // Create and export the route tree
 
-export const routeTree = rootRoute.addChildren({ IndexRoute, LoginLazyRoute })
+export const routeTree = rootRoute.addChildren({
+  IndexRoute,
+  LoginLazyRoute,
+  AuthorNamespaceRoute,
+})
 
 /* prettier-ignore-end */
 
@@ -65,7 +82,8 @@ export const routeTree = rootRoute.addChildren({ IndexRoute, LoginLazyRoute })
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/login"
+        "/login",
+        "/author/$namespace"
       ]
     },
     "/": {
@@ -73,6 +91,9 @@ export const routeTree = rootRoute.addChildren({ IndexRoute, LoginLazyRoute })
     },
     "/login": {
       "filePath": "login.lazy.tsx"
+    },
+    "/author/$namespace": {
+      "filePath": "author/$namespace.tsx"
     }
   }
 }

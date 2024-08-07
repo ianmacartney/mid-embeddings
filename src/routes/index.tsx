@@ -6,6 +6,7 @@ import { api } from "@convex/_generated/api";
 
 export const Route = createFileRoute("/")({
   component: () => {
+    // TODO: get namespace from env variable, default to first namespace.
     const gameResult = useQuery(api.game.getDailyGame, {
       namespace: "MixedFeels",
     });

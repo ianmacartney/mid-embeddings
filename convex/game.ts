@@ -44,10 +44,20 @@ import { getTextByTitle } from "./embed";
 import { paginationOptsValidator } from "convex/server";
 
 export const listGamesByNamespace = query({
-  args: { namespaceId: vv.id("namespaces") },
+  args: { namespace: v.string() },
   handler: async (ctx, args) => {
+    const namespace = await getOneFrom(
+      ctx.db,
+      "namespaces",
+      "name",
+      args.namespace,
+    );
+    if (!namespace) {
+      console.error("Namespace not found: " + args.namespace);
+      return [];
+    }
     return asyncMap(
-      getManyFrom(ctx.db, "games", "namespaceId", args.namespaceId),
+      getManyFrom(ctx.db, "games", "namespaceId", namespace._id),
       async (game) => {
         const midpoint = await ctx.db.get(game.midpointId);
         if (!midpoint) return null;
