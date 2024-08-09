@@ -23,10 +23,10 @@ import { makeMigration } from "convex-helpers/server/migrations";
 import type {
   FieldPaths,
   NamedTableInfo,
-  TableDefinition,
   TableNamesInDataModel,
 } from "convex/server";
 import schema from "./schema";
+import { getOneFrom } from "convex-helpers/server/relationships";
 
 export const { runWithRetries, retry } = makeActionRetrier("functions:retry");
 export const migration = makeMigration(internalMutation, {
@@ -78,15 +78,17 @@ export const userAction = customAction(
   }),
 );
 
-async function getUserAndNamespace(
-  ctx: QueryCtx,
-  { namespaceId }: { namespaceId: Id<"namespaces"> },
-) {
+async function getUserAndNamespace(ctx: QueryCtx, args: { namespace: string }) {
   const user = await getUser(ctx);
   if (!user) {
     throw new Error("Not authenticated");
   }
-  const namespace = await ctx.db.get(namespaceId);
+  const namespace = await getOneFrom(
+    ctx.db,
+    "namespaces",
+    "name",
+    args.namespace,
+  );
   if (!namespace) {
     throw new Error("Namespace not found");
   }
@@ -97,17 +99,17 @@ async function getUserAndNamespace(
 }
 
 export const namespaceAdminQuery = customQuery(query, {
-  args: { namespaceId: v.id("namespaces") },
+  args: { namespace: v.string() },
   input: async (ctx, args) => ({
-    args: { namespaceId: args.namespaceId },
+    args,
     ctx: await getUserAndNamespace(ctx, args),
   }),
 });
 
 export const namespaceAdminMutation = customMutation(mutation, {
-  args: { namespaceId: v.id("namespaces") },
+  args: { namespace: v.string() },
   input: async (ctx, args) => ({
-    args: { namespaceId: args.namespaceId },
+    args,
     ctx: await getUserAndNamespace(ctx, args),
   }),
 });
@@ -115,7 +117,7 @@ export const namespaceAdminMutation = customMutation(mutation, {
 export const fetchUserAndNamespace = internalQuery(getUserAndNamespace);
 
 export const namespaceAdminAction = customAction(action, {
-  args: { namespaceId: v.id("namespaces") },
+  args: { namespace: v.string() },
   async input(ctx, args) {
     // Need to cast here to avoid circular api types.
     const { user, namespace } = (await ctx.runQuery(
@@ -123,8 +125,8 @@ export const namespaceAdminAction = customAction(action, {
       args,
     )) as { user: Doc<"users">; namespace: Doc<"namespaces"> };
     return {
+      args,
       ctx: { user, namespace },
-      args: { namespaceId: args.namespaceId },
     };
   },
 });
