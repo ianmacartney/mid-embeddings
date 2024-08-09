@@ -29,7 +29,7 @@ import type {
 import schema from "./schema";
 
 export const { runWithRetries, retry } = makeActionRetrier("functions:retry");
-export const migrate = makeMigration(internalMutation, {
+export const migration = makeMigration(internalMutation, {
   migrationTable: "migrations",
 });
 

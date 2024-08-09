@@ -17,7 +17,7 @@ import words from "./words.json";
 import { getManyFrom, getOneFrom } from "convex-helpers/server/relationships";
 import {
   getOrThrow,
-  migrate,
+  migration,
   namespaceAdminQuery,
   userAction,
   userMutation,
@@ -411,7 +411,7 @@ export const getAllWords = internalQuery({
 //   },
 // });
 
-export const feelWord = migrate({
+export const feelWord = migration({
   table: "feels",
   migrateOne: async (_ctx, doc) => {
     return {
