@@ -202,6 +202,40 @@ export const listMidpoints = namespaceAdminQuery({
   },
 });
 
+export const basicVectorSearch = namespaceAdminAction({
+  args: { text: v.string() },
+  returns: v.array(v.object({ title: v.string(), score: v.number() })),
+  handler: async (ctx, args) => {
+    const embedding = await embed(args.text);
+    const results = await ctx.vectorSearch("embeddings", "embedding", {
+      vector: embedding,
+      limit: 10,
+      filter: (q) => q.eq("namespaceId", ctx.namespace._id),
+    });
+    const texts: { title: string; score: number }[] = await ctx.runQuery(
+      internal.game.getResults,
+      {
+        results,
+      },
+    );
+    return texts;
+  },
+});
+
+export const getResults = internalQuery({
+  args: {
+    results: v.array(v.object({ _id: v.id("embeddings"), _score: v.number() })),
+  },
+  returns: v.array(v.object({ title: v.string(), score: v.number() })),
+  handler: async (ctx, args) => {
+    return asyncMap(args.results, async ({ _id, _score }) => {
+      const text = await getOneFrom(ctx.db, "texts", "embeddingId", _id);
+      if (!text) throw new Error("Text not found");
+      return { title: text.title, score: _score };
+    });
+  },
+});
+
 export const calculateMidpoint = namespaceAdminMutation({
   args: {
     left: v.string(),
