@@ -40,7 +40,7 @@ import {
   vectorLength,
 } from "./linearAlgebra";
 import { omit } from "convex-helpers";
-import { getTextByTitle } from "./embed";
+import { getTextByTitle, populateTextsFromCache } from "./embed";
 import { paginationOptsValidator } from "convex/server";
 
 export const listGamesByNamespace = query({
@@ -151,33 +151,49 @@ export const addTextToNamespace = namespaceAdminAction({
     ),
     texts: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, args) => {
-    const texts = args.titled || [];
-    texts.concat((args.texts || []).map((text) => ({ text, title: text })));
-    const indexesToEmbed = await ctx.runMutation(
-      internal.embed.populateTextsFromCache,
-      {
-        namespaceId: ctx.namespace._id,
-        texts,
-      },
+  handler: async (ctx, args): Promise<number> => {
+    const texts = (args.titled || []).concat(
+      (args.texts || []).map((text) => ({ text, title: text })),
     );
+    console.debug(
+      `Adding ${texts.length} texts to namespace ${ctx.namespace.name}`,
+    );
+    const populateChunk = [];
+    for (let i = 0; i < texts.length; i += 100) {
+      populateChunk.push(texts.slice(i, i + 100));
+    }
+    const textsToEmbed = (
+      await Promise.all(
+        populateChunk.map(async (chunk) =>
+          ctx.runMutation(internal.embed.populateTextsFromCache, {
+            namespaceId: ctx.namespace._id,
+            texts: chunk,
+          }),
+        ),
+      )
+    ).flat();
+    console.debug(`Embedding ${textsToEmbed.length} texts`);
     const chunks = [];
-    for (let i = 0; i < indexesToEmbed.length; i += 100) {
-      chunks.push(indexesToEmbed.slice(i, i + 100));
+    for (let i = 0; i < textsToEmbed.length; i += 100) {
+      chunks.push(textsToEmbed.slice(i, i + 100));
     }
     await Promise.all(
-      chunks.map(async (chunk) => {
-        const embeddings = await embedBatch(chunk.map((i) => texts[i].text));
+      chunks.map(async (chunk, i) => {
+        console.debug(`Starting ${i} (${chunk.length})`);
+        const embeddings = await embedBatch(chunk.map((t) => t.text));
         const toInsert = embeddings.map((embedding, i) => {
-          const { title, text } = texts[chunk[i]];
+          const { title, text } = chunk[i];
           return { title, text, embedding };
         });
+        console.debug(`Finished ${i} (${chunk.length})`);
         await ctx.runMutation(internal.embed.insertTexts, {
           namespaceId: ctx.namespace._id,
           texts: toInsert,
         });
+        console.debug(`Added ${i} (${chunk.length})`);
       }),
     );
+    return textsToEmbed.length;
   },
 });
 

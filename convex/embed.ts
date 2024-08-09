@@ -45,12 +45,12 @@ export const populateTextsFromCache = internalMutation({
     texts: v.array(v.object({ title: v.string(), text: v.string() })),
   },
   handler: async (ctx, args) => {
-    const missingIndexes = await Promise.all(
-      args.texts.map(async ({ title, text }, index) => {
+    const missingTexts = await Promise.all(
+      args.texts.map(async ({ title, text }) => {
         const existing = await getTextByTitle(ctx, args.namespaceId, title);
         if (existing && existing.text === text) return null;
         const matching = await getOneFrom(ctx.db, "texts", "text", text);
-        if (!matching) return index; // we need to embed this text
+        if (!matching) return { title, text }; // we need to embed this text
         const { embedding } = await getOrThrow(ctx, matching.embeddingId);
         // We can copy over from a matching text
         if (existing) {
@@ -71,7 +71,7 @@ export const populateTextsFromCache = internalMutation({
         return null;
       }),
     );
-    return missingIndexes.flatMap((m, i) => (m === null ? [] : [i]));
+    return missingTexts.flatMap((m) => (m === null ? [] : [m]));
   },
 });
 
