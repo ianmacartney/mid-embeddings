@@ -32,7 +32,7 @@ import {
   vv,
 } from "./functions";
 import schema from "./schema";
-import { embed, embedBatch } from "./llm";
+import { asyncMapChunked, chunk, embed, embedBatch } from "./llm";
 import {
   deltaVector,
   dotProduct,
@@ -59,22 +59,15 @@ export const listGamesByNamespace = query({
     return asyncMap(
       getManyFrom(ctx.db, "games", "namespaceId", namespace._id),
       async (game) => {
-        const midpoint = await ctx.db.get(game.midpointId);
-        if (!midpoint) return null;
-        const left = await getTextByTitle(ctx, game.namespaceId, midpoint.left);
-        const right = await getTextByTitle(
-          ctx,
-          game.namespaceId,
-          midpoint.right,
-        );
-        if (!left || !right) return null;
+        const midpoint = await getOrThrow(ctx, game.midpointId);
         return {
           _id: game._id,
-          left: left.title,
-          right: right.title,
+          active: game.active,
+          left: midpoint.left,
+          right: midpoint.right,
         };
       },
-    ).then((games) => games.flatMap((g) => (g === null ? [] : [g])));
+    );
   },
 });
 
@@ -164,27 +157,15 @@ export const addTextToNamespace = namespaceAdminAction({
     console.debug(
       `Adding ${texts.length} texts to namespace ${ctx.namespace.name}`,
     );
-    const populateChunk = [];
-    for (let i = 0; i < texts.length; i += 100) {
-      populateChunk.push(texts.slice(i, i + 100));
-    }
-    const textsToEmbed = (
-      await Promise.all(
-        populateChunk.map(async (chunk) =>
-          ctx.runMutation(internal.embed.populateTextsFromCache, {
-            namespaceId: ctx.namespace._id,
-            texts: chunk,
-          }),
-        ),
-      )
-    ).flat();
+    const textsToEmbed = await asyncMapChunked(texts, async (chunk) =>
+      ctx.runMutation(internal.embed.populateTextsFromCache, {
+        namespaceId: ctx.namespace._id,
+        texts: chunk,
+      }),
+    );
     console.debug(`Embedding ${textsToEmbed.length} texts`);
-    const chunks = [];
-    for (let i = 0; i < textsToEmbed.length; i += 100) {
-      chunks.push(textsToEmbed.slice(i, i + 100));
-    }
     await Promise.all(
-      chunks.map(async (chunk, i) => {
+      chunk(textsToEmbed).map(async (chunk, i) => {
         console.debug(`Starting ${i} (${chunk.length})`);
         const embeddings = await embedBatch(chunk.map((t) => t.text));
         const toInsert = embeddings.map((embedding, i) => {
