@@ -1,7 +1,9 @@
+const d = new URL(process.env.CONVEX_SITE_URL!);
+d.protocol = "https:";
 export default {
   providers: [
     {
-      domain: process.env.CONVEX_SITE_URL,
+      domain: d.toString(),
       applicationID: "convex",
     },
   ],
