@@ -132,13 +132,19 @@ export const getGame = query({
   },
 });
 
-export const createNamespace = userMutation({
+export const upsertNamespace = userMutation({
   args: schema.tables.namespaces.validator.fields,
   handler: async (ctx, args) => {
     // TODO: check that the user is allowed to create a namespace
+    if (!ctx.user) {
+      throw new Error("Not authenticated");
+    }
     const existing = await getOneFrom(ctx.db, "namespaces", "name", args.name);
     if (existing) {
-      throw new Error("Namespace already exists");
+      if (existing.createdBy !== ctx.user._id) {
+        throw new Error("Namespace already exists");
+      }
+      return existing._id;
     }
     return ctx.db.insert("namespaces", args);
   },
@@ -347,6 +353,10 @@ export const makeGame = namespaceAdminMutation({
     midpointId: v.id("midpoints"),
   },
   handler: async (ctx, args) => {
+    const midpoint = await getOrThrow(ctx, args.midpointId);
+    if (midpoint.namespaceId !== ctx.namespace._id) {
+      throw new Error("Midpoint not in authorized namespace");
+    }
     return ctx.db.insert("games", {
       namespaceId: ctx.namespace._id,
       midpointId: args.midpointId,
