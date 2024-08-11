@@ -266,15 +266,16 @@ export function simpleEmbeddingsAPI(
       });
       return json.data[0].embedding;
     },
-    embedBatch: async (texts: string[]): Promise<Array<Array<number>>> => {
-      const json = await api.create({
-        input: texts,
-        model,
-      });
-      const allembeddings = json.data;
-      allembeddings.sort((a, b) => a.index - b.index);
-      return allembeddings.map(({ embedding }) => embedding);
-    },
+    embedBatch: async (texts: string[]): Promise<Array<Array<number>>> =>
+      asyncMapChunked(texts, async (input) => {
+        const json = await api.create({
+          input,
+          model,
+        });
+        const allembeddings = json.data;
+        allembeddings.sort((a, b) => a.index - b.index);
+        return allembeddings.map(({ embedding }) => embedding);
+      }),
   };
 }
 
@@ -342,6 +343,23 @@ export async function retryWithBackoff<T>(
     }
   }
   throw new Error("Unreachable");
+}
+
+export function chunk<T>(items: T[], chunkSize?: number): T[][] {
+  const chunks = [];
+  const size = chunkSize || 100;
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+export async function asyncMapChunked<In, Out>(
+  items: In[],
+  fn: (batch: In[], index: number) => Out[] | Promise<Out[]>,
+  chunkSize?: number,
+): Promise<Out[]> {
+  return Promise.all(chunk(items, chunkSize).map(fn)).then((c) => c.flat());
 }
 
 /**
