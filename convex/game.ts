@@ -297,7 +297,7 @@ export const calculateMidpoint = namespaceAdminMutation({
     );
 
     await ctx.scheduler.runAfter(0, internal.game.findMidpointMatches, {
-      ...omit(args, ["namespace"]),
+      ...args,
       namespaceId: ctx.namespace._id,
       midpointEmbedding,
     });

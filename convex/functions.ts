@@ -101,7 +101,7 @@ async function getUserAndNamespace(ctx: QueryCtx, args: { namespace: string }) {
 export const namespaceAdminQuery = customQuery(query, {
   args: { namespace: v.string() },
   input: async (ctx, args) => ({
-    args,
+    args: {},
     ctx: await getUserAndNamespace(ctx, args),
   }),
 });
@@ -109,7 +109,7 @@ export const namespaceAdminQuery = customQuery(query, {
 export const namespaceAdminMutation = customMutation(mutation, {
   args: { namespace: v.string() },
   input: async (ctx, args) => ({
-    args,
+    args: {},
     ctx: await getUserAndNamespace(ctx, args),
   }),
 });
@@ -125,7 +125,7 @@ export const namespaceAdminAction = customAction(action, {
       args,
     )) as { user: Doc<"users">; namespace: Doc<"namespaces"> };
     return {
-      args,
+      args: {},
       ctx: { user, namespace },
     };
   },
