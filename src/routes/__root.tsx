@@ -1,3 +1,4 @@
+import { Toaster } from "@/components/ui/toaster";
 import { UserMenu } from "@/components/UserMenu";
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
@@ -38,6 +39,7 @@ export const Route = createRootRoute({
       </header>
       <main className="flex grow flex-col overflow-hidden">
         <Outlet />
+        <Toaster />
       </main>
       <footer className="border-t hidden sm:block">
         <div className="flex">
@@ -51,7 +53,7 @@ export const Route = createRootRoute({
           </div>
         </div>
       </footer>
-      <TanStackRouterDevtools />
+      <TanStackRouterDevtools position="bottom-right" />
     </div>
   ),
 });

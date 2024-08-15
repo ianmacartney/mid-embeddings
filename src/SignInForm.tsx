@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { toast } from "./components/ui/use-toast";
-import { Toaster } from "./components/ui/toaster";
 import dayjs from "dayjs";
 
 export function SignInForm() {
@@ -56,7 +55,6 @@ function SignInAnonymously() {
       }
     >
       Continue as a guest
-      <Toaster />
     </Button>
   );
 }
