@@ -86,7 +86,7 @@ function Namespace() {
             />
           </div>
         </div>
-        {texts.results.length > 0 && (
+        {!isEmpty && (
           <div className="flex flex-col items-center w-full gap-2">
             <div className="flex gap-4">
               <div className="flex flex-col items-center gap-2">
@@ -160,15 +160,17 @@ function Namespace() {
                     </Button>
                     <Button
                       onClick={() => {
-                        deleteMidpoint({
-                          namespace,
-                          midpointId: midpoint._id,
-                        }).catch((e) =>
-                          toast({
-                            title: "Error deleting midpoint",
-                            description: e.message,
-                          }),
-                        );
+                        convex
+                          .mutation(fn.deleteMidpoint, {
+                            namespace,
+                            midpointId: midpoint._id,
+                          })
+                          .catch((e) =>
+                            toast({
+                              title: "Error deleting midpoint",
+                              description: e.message,
+                            }),
+                          );
                       }}
                     >
                       <TrashIcon />
@@ -179,22 +181,40 @@ function Namespace() {
               <div className="flex flex-col items-center gap-2">
                 <span className="text-3xl font-bold">Games</span>
                 <div className="flex flex-col justify-center gap-2">
-                  {games.map((game) => (
-                    // <div className="px-3 py-1 text-sm font-medium rounded-md bg-muted text-muted-foreground">
-                    <Button
-                      key={game._id}
-                      onClick={() => {
-                        console.log(game);
-                        setWords((words) => ({
-                          ...words,
-                          left: game.left,
-                          right: game.right,
-                        }));
-                      }}
-                    >
-                      {game.left} - {game.right} {game.active ? "⬅" : null}
-                    </Button>
-                    // </div>
+                  {[...games].reverse().map((game) => (
+                    <div key={game._id} className="flex gap-2">
+                      <Button
+                        key={game._id}
+                        variant="secondary"
+                        onClick={() => {
+                          setWords((words) => ({
+                            ...words,
+                            left: game.left,
+                            right: game.right,
+                          }));
+                        }}
+                      >
+                        {game.left} - {game.right} {game.active ? "✅" : null}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          convex
+                            .mutation(fn.setGameActive, {
+                              namespace,
+                              gameId: game._id,
+                              active: !game.active,
+                            })
+                            .catch((e) =>
+                              toast({
+                                title: "Error deleting midpoint",
+                                description: e.message,
+                              }),
+                            );
+                        }}
+                      >
+                        {game.active ? <Cross1Icon /> : "Activate"}
+                      </Button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -203,7 +223,7 @@ function Namespace() {
           </div>
         )}
         <Textarea
-          placeholder="Add text"
+          placeholder="Add text (skipping those already added) - enter JSON or line-delimited and hit enter"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -213,7 +233,7 @@ function Namespace() {
               toast({ title: "Adding text" });
               Promise.all(
                 chunk(titled, 1000).map((chunk) =>
-                  addText({ namespace, titled: chunk }),
+                  convex.action(fn.addText, { namespace, titled: chunk }),
                 ),
               )
                 .then(() => {
@@ -321,9 +341,9 @@ function parseText(input: string): { title: string; text: string }[] {
 }
 
 function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
-  const basicSearch = useAction(api.namespace.basicVectorSearch);
+  const basicSearch = useAction(fn.basicVectorSearch);
   const [basicResults, setBasicResults] = useState<
-    FunctionReturnType<typeof api.namespace.basicVectorSearch>
+    FunctionReturnType<typeof fn.basicVectorSearch>
   >([]);
   useEffect(() => {
     if (!text) return;
@@ -341,12 +361,16 @@ function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
               key={result.title + i}
               className="px-3 py-1 text-sm font-medium rounded-md bg-muted text-muted-foreground"
             >
-              {result.title} - {result.score}
+              {result.title} - {f(result.score)}
             </div>
           ))}
       </div>
     </div>
   );
+}
+
+function f(num: number) {
+  return num.toPrecision(3);
 }
 
 function Midpoint({
@@ -358,10 +382,10 @@ function Midpoint({
   right: string;
   left: string;
 }) {
-  const search = useAction(api.namespace.midpointSearch);
-  const makeGame = useMutation(api.namespace.makeGame);
+  const search = useAction(fn.midpointSearch);
+  const makeGame = useMutation(fn.makeGame);
   const [midpoint, setMidpoint] =
-    useState<FunctionReturnType<typeof api.namespace.midpointSearch>>();
+    useState<FunctionReturnType<typeof fn.midpointSearch>>();
   useEffect(() => {
     if (!left || !right) return;
     search({ namespace, left, right }).then((results) => {
@@ -379,7 +403,7 @@ function Midpoint({
             key={result.title + i}
             className="px-3 py-1 text-sm font-medium rounded-md bg-muted text-muted-foreground"
           >
-            {result.title} - {result.score}
+            {result.title} - {f(result.score)}
           </div>
         ))}
       </div>

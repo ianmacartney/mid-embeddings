@@ -5,28 +5,30 @@ import Game from "@/components/Game";
 import { api } from "@convex/_generated/api";
 
 export const Route = createFileRoute("/")({
-  component: () => {
-    // TODO: get namespace from env variable, default to first namespace.
-    const gameResult = useQuery(api.game.getDailyGame, {
-      namespace: "mixed-meaning",
-    });
-    if (gameResult && !gameResult.ok) {
-      return <div>Error: {gameResult.error}</div>;
-    }
-    if (!gameResult) {
-      return <div>Loading...</div>;
-    }
-    return (
-      <>
-        <Authenticated>
-          <div className="container">
-            <Game {...gameResult?.value} />
-          </div>
-        </Authenticated>
-        <Unauthenticated>
-          <SignInForm />
-        </Unauthenticated>
-      </>
-    );
-  },
+  component: Home,
 });
+
+function Home() {
+  // TODO: get namespace from env variable, default to first namespace.
+  const gameResult = useQuery(api.game.getDailyGame, {
+    namespace: "mixed-feels",
+  });
+  if (gameResult && !gameResult.ok) {
+    return <div>Error: {gameResult.error}</div>;
+  }
+  if (!gameResult) {
+    return <div>Loading...</div>;
+  }
+  return (
+    <>
+      <Authenticated>
+        <div className="container">
+          <Game {...gameResult?.value} />
+        </div>
+      </Authenticated>
+      <Unauthenticated>
+        <SignInForm />
+      </Unauthenticated>
+    </>
+  );
+}
