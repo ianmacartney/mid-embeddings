@@ -2,6 +2,7 @@ import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   useAction,
+  useConvex,
   useMutation,
   usePaginatedQuery,
   useQuery,
@@ -12,34 +13,27 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { FunctionReturnType } from "convex/server";
-import { ButtonIcon, TrashIcon } from "@radix-ui/react-icons";
+import { Cross1Icon, TrashIcon } from "@radix-ui/react-icons";
 import { chunk } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/$namespace")({
   component: Namespace,
 });
 
+const fn = api.namespace;
+
 function Namespace() {
   const { namespace } = Route.useParams();
-  const { name, description } =
-    useQuery(api.namespace.getNamespace, { namespace }) || {};
-  const updateNamespace = useMutation(api.namespace.update);
-  const addText = useAction(api.namespace.addText);
-  const texts = usePaginatedQuery(
-    api.namespace.paginateText,
-    {
-      namespace,
-    },
-    { initialNumItems: 10 },
-  );
-  const games =
-    useQuery(api.namespace.listGamesByNamespace, { namespace }) ?? [];
+  const { name, description, isEmpty } =
+    useQuery(fn.getNamespace, { namespace }) || {};
+  const convex = useConvex();
+  const updateNamespace = useMutation(fn.update);
+  const games = useQuery(fn.listGamesByNamespace, { namespace }) ?? [];
   const midpoints = usePaginatedQuery(
-    api.namespace.listMidpoints,
+    fn.listMidpoints,
     { namespace },
     { initialNumItems: 10 },
   );
-  const deleteMidpoint = useMutation(api.namespace.deleteMidpoint);
   const [words, setWords] = useState({ left: "", right: "", guess: "" });
   useEffect(() => {
     if (midpoints.results.length === 0) return;

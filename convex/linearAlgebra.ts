@@ -1,8 +1,10 @@
-export function getMidpoint(a: number[], b: number[]) {
-  const mix = a.map((n, i) => (n + b[i]) / 2);
-  const magnitude = vectorLength(mix);
-  const vector = mix.map((n) => n / magnitude);
-  return vector;
+export function calculateMidpoint(a: number[], b: number[]) {
+  return normalize(a.map((n, i) => n + b[i]));
+}
+
+export function normalize(vector: number[]) {
+  const magnitude = vectorLength(vector);
+  return vector.map((n) => n / magnitude);
 }
 
 // return the magnitude of a vector

@@ -77,7 +77,11 @@ export const update = namespaceAdminMutation({
 export const getNamespace = namespaceAdminQuery({
   args: {},
   handler: async (ctx, args) => {
-    return ctx.namespace;
+    const isEmpty = !(await ctx.db
+      .query("texts")
+      .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
+      .first());
+    return { ...ctx.namespace, isEmpty };
   },
 });
 
@@ -185,19 +189,17 @@ export const midpointSearch = namespaceAdminAction({
     skipCache: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<Doc<"midpoints">> => {
-    const { left, right, midpoint } = await ctx.runQuery(
-      internal.namespace.getMidpointData,
-      {
-        namespaceId: ctx.namespace._id,
-        left: args.left,
-        right: args.right,
-      },
-    );
+    const midpoint = await ctx.runQuery(internal.namespace.getMidpoint, {
+      namespaceId: ctx.namespace._id,
+      left: args.left,
+      right: args.right,
+    });
     if (!args.skipCache && midpoint) {
       return midpoint;
     }
-    const leftEmbedding = left?.embedding || (await embed(args.left));
-    const rightEmbedding = right?.embedding || (await embed(args.right));
+    const leftEmbedding = midpoint?.leftEmbedding || (await embed(args.left));
+    const rightEmbedding =
+      midpoint?.rightEmbedding || (await embed(args.right));
 
     const midpointEmbedding = calculateMidpoint(leftEmbedding, rightEmbedding);
     const topMatches = await ctx
@@ -213,20 +215,22 @@ export const midpointSearch = namespaceAdminAction({
       left: args.left,
       right: args.right,
       namespaceId: ctx.namespace._id,
+      leftEmbedding,
+      rightEmbedding,
       midpointEmbedding,
       topMatches,
     }) as Promise<Doc<"midpoints">>;
   },
 });
 
-export const getMidpointData = internalQuery({
+export const getMidpoint = internalQuery({
   args: {
     namespaceId: v.id("namespaces"),
     left: v.string(),
     right: v.string(),
   },
   handler: async (ctx, args) => {
-    const midpoint = await ctx.db
+    return ctx.db
       .query("midpoints")
       .withIndex("namespaceId", (q) =>
         q
@@ -235,23 +239,6 @@ export const getMidpointData = internalQuery({
           .eq("right", args.right),
       )
       .first();
-    const left = await getTextByTitle(ctx, args.namespaceId, args.left);
-    const right = await getTextByTitle(ctx, args.namespaceId, args.right);
-    const leftEmbedding = left && (await getOrThrow(ctx, left.embeddingId));
-    const rightEmbedding = right && (await getOrThrow(ctx, right.embeddingId));
-    return {
-      left: left && {
-        title: left.title,
-        text: left.text,
-        embedding: leftEmbedding!.embedding,
-      },
-      right: right && {
-        title: right.title,
-        text: right.text,
-        embedding: rightEmbedding!.embedding,
-      },
-      midpoint,
-    } as const;
   },
 });
 
@@ -335,5 +322,16 @@ export const makeGame = namespaceAdminMutation({
       midpointId: args.midpointId,
       active: false,
     });
+  },
+});
+
+export const setGameActive = namespaceAdminMutation({
+  args: { gameId: v.id("games"), active: v.boolean() },
+  handler: async (ctx, args) => {
+    const game = await getOrThrow(ctx, args.gameId);
+    if (game.namespaceId !== ctx.namespace._id) {
+      throw new Error("Game not in authorized namespace");
+    }
+    await ctx.db.patch(args.gameId, { active: args.active });
   },
 });

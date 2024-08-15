@@ -56,6 +56,8 @@ export default defineSchema({
     namespaceId: v.id("namespaces"),
     left: v.string(), // titles
     right: v.string(),
+    leftEmbedding: v.array(v.number()),
+    rightEmbedding: v.array(v.number()),
     midpointEmbedding: v.array(v.number()),
     topMatches: v.array(v.object({ title: v.string(), score: v.number() })),
   }).index("namespaceId", ["namespaceId", "left", "right"]),

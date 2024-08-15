@@ -51,7 +51,6 @@ export const getDailyGame = query({
       .order("desc")
       .first();
     if (!game) {
-      console.error("No active games found");
       return error("No active games found");
     }
     // TODO: if future games are invite-only / not public, check access
@@ -120,14 +119,8 @@ export const insertGuess = internalMutation({
     const game = await getOrThrow(ctx, args.gameId);
     const midpoint = await getOrThrow(ctx, game.midpointId);
     const score = dotProduct(midpoint.midpointEmbedding, embedding);
-    const [leftDistance, rightDistance] = await Promise.all(
-      [midpoint.left, midpoint.right].map(async (title) => {
-        const text = await getTextByTitle(ctx, game.namespaceId, title);
-        if (!text) throw new Error("Midpoint text not found: " + title);
-        const leftEmbedding = await getOrThrow(ctx, text.embeddingId);
-        return vectorLength(deltaVector(embedding, leftEmbedding.embedding));
-      }),
-    );
+    const leftDistance = dotProduct(midpoint.leftEmbedding, embedding);
+    const rightDistance = dotProduct(midpoint.rightEmbedding, embedding);
     const rank = midpoint.topMatches.findIndex(
       (m) => m.score <= score + EPSILON,
     );
