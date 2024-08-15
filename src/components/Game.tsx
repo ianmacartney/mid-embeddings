@@ -121,10 +121,14 @@ function Guesses({
       {guesses &&
         guesses.map((guess) => (
           <div key={guess._id}>
-            {guess.leftDistance} - {guess.text}: {guess.rank}({guess.score}) -{" "}
-            {guess.rightDistance}
+            {f(guess.leftDistance)} - {guess.text}: {guess.rank}(
+            {f(guess.score)}) - {f(guess.rightDistance)}
           </div>
         ))}
     </>
   );
+}
+
+function f(num: number) {
+  return num.toPrecision(3);
 }

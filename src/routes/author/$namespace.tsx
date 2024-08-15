@@ -205,20 +205,7 @@ function Namespace() {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col items-center gap-2 ">
-              <span className="text-3xl font-bold">Words</span>
-              {texts.results.map((text) => (
-                <div key={text._id} className="flex items-center gap-4">
-                  <div className="flex-1 text-sm font-medium">
-                    {text.title}{" "}
-                    {text.text === text.title ? null : `(${text.text})`}
-                  </div>
-                </div>
-              ))}
-              {texts.status === "CanLoadMore" && (
-                <Button onClick={() => texts.loadMore(100)}>Load more</Button>
-              )}
-            </div>
+            <Words namespace={namespace} />
           </div>
         )}
         <Textarea
@@ -250,6 +237,31 @@ function Namespace() {
           className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
       </main>
+    </div>
+  );
+}
+
+function Words({ namespace }: { namespace: string }) {
+  const texts = usePaginatedQuery(
+    fn.paginateText,
+    {
+      namespace,
+    },
+    { initialNumItems: 10 },
+  );
+  return (
+    <div className="flex flex-col items-center gap-2 ">
+      <span className="text-3xl font-bold">Words</span>
+      {texts.results.map((text) => (
+        <div key={text._id} className="flex items-center gap-4">
+          <div className="flex-1 text-sm font-medium">
+            {text.title} {text.text === text.title ? null : `(${text.text})`}
+          </div>
+        </div>
+      ))}
+      {texts.status === "CanLoadMore" && (
+        <Button onClick={() => texts.loadMore(100)}>Load more</Button>
+      )}
     </div>
   );
 }
