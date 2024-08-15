@@ -30,7 +30,9 @@ export function SignInWithGitHub() {
       className="flex-1"
       variant="outline"
       type="button"
-      onClick={() => void signIn("github")}
+      onClick={() =>
+        void signIn("github", { redirectTo: window.location.href })
+      }
     >
       <GitHubLogoIcon className="mr-2 h-4 w-4" /> GitHub
     </Button>

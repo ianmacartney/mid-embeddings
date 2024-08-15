@@ -15,14 +15,17 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 // Render the app
 const rootElement = document.getElementById("root")!;
 ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <ThemeProvider attribute="class">
-      <ConvexAuthProvider
-        client={convex}
-        replaceURL={(to) => router.navigate({ to, replace: true })}
-      >
-        <RouterProvider router={router} />
-      </ConvexAuthProvider>
-    </ThemeProvider>
-  </React.StrictMode>,
+  // <React.StrictMode> TODO: Enable when auth is fixed
+  <ThemeProvider attribute="class">
+    <ConvexAuthProvider
+      client={convex}
+      replaceURL={(to) => {
+        console.log("replaceURL", to);
+        router.navigate({ to, replace: true });
+      }}
+    >
+      <RouterProvider router={router} />
+    </ConvexAuthProvider>
+  </ThemeProvider>,
+  // </React.StrictMode>,
 );
