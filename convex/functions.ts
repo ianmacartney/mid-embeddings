@@ -33,17 +33,6 @@ export const migration = makeMigration(internalMutation, {
   migrationTable: "migrations",
 });
 
-// import { Auth } from "convex/server";
-// const TOKEN_SUB_CLAIM_DIVIDER = "|";
-// async function getUserId(ctx: { auth: Auth }) {
-//   const identity = await ctx.auth.getUserIdentity();
-//   if (identity === null) {
-//     return null;
-//   }
-//   const [userId] = identity.subject.split(TOKEN_SUB_CLAIM_DIVIDER);
-//   return userId as Id<"users">;
-// }
-
 async function getUser(ctx: QueryCtx) {
   const userId = await auth.getUserId(ctx);
   if (!userId) return null;

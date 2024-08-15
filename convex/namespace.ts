@@ -1,0 +1,329 @@
+import { v } from "convex/values";
+import { internal } from "./_generated/api";
+import { Doc } from "./_generated/dataModel";
+import { internalMutation, internalQuery } from "./_generated/server";
+import { getManyFrom, getOneFrom } from "convex-helpers/server/relationships";
+import { asyncMap } from "convex-helpers";
+import {
+  getOrThrow,
+  namespaceAdminAction,
+  namespaceAdminMutation,
+  namespaceAdminQuery,
+  userMutation,
+} from "./functions";
+import schema from "./schema";
+import { asyncMapChunked, chunk, embed, embedBatch } from "./llm";
+import { calculateMidpoint } from "./linearAlgebra";
+import { partial } from "convex-helpers/validators";
+import { getTextByTitle } from "./embed";
+import { paginationOptsValidator } from "convex/server";
+
+/**
+ * [ ] compare some embeddings between words & feelings - are they even right?
+ * [ ] why were some feelings not even matching with themselves?
+ */
+
+export const listGamesByNamespace = namespaceAdminQuery({
+  args: {},
+  handler: async (ctx, args) => {
+    return asyncMap(
+      getManyFrom(ctx.db, "games", "namespaceId", ctx.namespace._id),
+      async (game) => {
+        const midpoint = await getOrThrow(ctx, game.midpointId);
+        return {
+          _id: game._id,
+          active: game.active,
+          left: midpoint.left,
+          right: midpoint.right,
+        };
+      },
+    );
+  },
+});
+
+export const upsertNamespace = userMutation({
+  args: schema.tables.namespaces.validator.fields,
+  handler: async (ctx, args) => {
+    // TODO: check that the user is allowed to create a namespace
+    if (!ctx.user) {
+      throw new Error("Not authenticated");
+    }
+    const existing = await getOneFrom(ctx.db, "namespaces", "slug", args.name);
+    if (existing) {
+      if (existing.createdBy !== ctx.user._id) {
+        throw new Error("Namespace already exists");
+      }
+      return existing._id;
+    }
+    return ctx.db.insert("namespaces", args);
+  },
+});
+
+export const update = namespaceAdminMutation({
+  args: partial(schema.tables.namespaces.validator.fields),
+  handler: async (ctx, args) => {
+    return ctx.db.patch(ctx.namespace._id, args);
+  },
+});
+
+export const getNamespace = namespaceAdminQuery({
+  args: {},
+  handler: async (ctx, args) => {
+    return ctx.namespace;
+  },
+});
+
+export const addText = namespaceAdminAction({
+  args: {
+    titled: v.optional(
+      v.array(v.object({ title: v.string(), text: v.string() })),
+    ),
+    texts: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args): Promise<number> => {
+    const texts = (args.titled || []).concat(
+      (args.texts || []).map((text) => ({ text, title: text })),
+    );
+    console.debug(
+      `Adding ${texts.length} texts to namespace ${ctx.namespace.name}`,
+    );
+    const textsToEmbed = await asyncMapChunked(texts, async (chunk) =>
+      ctx.runMutation(internal.embed.populateTextsFromCache, {
+        namespaceId: ctx.namespace._id,
+        texts: chunk,
+      }),
+    );
+    console.debug(`Embedding ${textsToEmbed.length} texts`);
+    await Promise.all(
+      chunk(textsToEmbed).map(async (chunk, i) => {
+        console.debug(`Starting ${i} (${chunk.length})`);
+        const embeddings = await embedBatch(chunk.map((t) => t.text));
+        const toInsert = embeddings.map((embedding, i) => {
+          const { title, text } = chunk[i];
+          return { title, text, embedding };
+        });
+        console.debug(`Finished ${i} (${chunk.length})`);
+        await ctx.runMutation(internal.embed.insertTexts, {
+          namespaceId: ctx.namespace._id,
+          texts: toInsert,
+        });
+        console.debug(`Added ${i} (${chunk.length})`);
+      }),
+    );
+    return textsToEmbed.length;
+  },
+});
+
+export const paginateText = namespaceAdminQuery({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query("texts")
+      .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
+      .paginate(args.paginationOpts);
+  },
+});
+
+export const listMidpoints = namespaceAdminQuery({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query("midpoints")
+      .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
+      .order("desc")
+      .paginate(args.paginationOpts);
+  },
+});
+
+export const basicVectorSearch = namespaceAdminAction({
+  args: { text: v.string() },
+  returns: v.array(v.object({ title: v.string(), score: v.number() })),
+  handler: async (ctx, args) => {
+    const embedding = await embed(args.text);
+    const results = await ctx.vectorSearch("embeddings", "embedding", {
+      vector: embedding,
+      limit: 10,
+      filter: (q) => q.eq("namespaceId", ctx.namespace._id),
+    });
+    const texts: { title: string; score: number }[] = await ctx.runQuery(
+      internal.namespace.getResults,
+      {
+        results,
+      },
+    );
+    return texts;
+  },
+});
+
+export const getResults = internalQuery({
+  args: {
+    results: v.array(v.object({ _id: v.id("embeddings"), _score: v.number() })),
+  },
+  returns: v.array(v.object({ title: v.string(), score: v.number() })),
+  handler: async (ctx, args) => {
+    return asyncMap(args.results, async ({ _id, _score }) => {
+      const text = await getOneFrom(ctx.db, "texts", "embeddingId", _id);
+      if (!text) throw new Error("Text not found");
+      return { title: text.title, score: _score };
+    });
+  },
+});
+
+export const midpointSearch = namespaceAdminAction({
+  args: {
+    left: v.string(),
+    right: v.string(),
+    skipCache: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args): Promise<Doc<"midpoints">> => {
+    const { left, right, midpoint } = await ctx.runQuery(
+      internal.namespace.getMidpointData,
+      {
+        namespaceId: ctx.namespace._id,
+        left: args.left,
+        right: args.right,
+      },
+    );
+    if (!args.skipCache && midpoint) {
+      return midpoint;
+    }
+    const leftEmbedding = left?.embedding || (await embed(args.left));
+    const rightEmbedding = right?.embedding || (await embed(args.right));
+
+    const midpointEmbedding = calculateMidpoint(leftEmbedding, rightEmbedding);
+    const topMatches = await ctx
+      .vectorSearch("embeddings", "embedding", {
+        vector: midpointEmbedding,
+        limit: 100,
+        filter: (q) => q.eq("namespaceId", ctx.namespace._id),
+      })
+      .then((results) =>
+        results.map(({ _id, _score }) => ({ embeddingId: _id, score: _score })),
+      );
+    return ctx.runMutation(internal.namespace.upsertMidpoint, {
+      left: args.left,
+      right: args.right,
+      namespaceId: ctx.namespace._id,
+      midpointEmbedding,
+      topMatches,
+    }) as Promise<Doc<"midpoints">>;
+  },
+});
+
+export const getMidpointData = internalQuery({
+  args: {
+    namespaceId: v.id("namespaces"),
+    left: v.string(),
+    right: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const midpoint = await ctx.db
+      .query("midpoints")
+      .withIndex("namespaceId", (q) =>
+        q
+          .eq("namespaceId", args.namespaceId)
+          .eq("left", args.left)
+          .eq("right", args.right),
+      )
+      .first();
+    const left = await getTextByTitle(ctx, args.namespaceId, args.left);
+    const right = await getTextByTitle(ctx, args.namespaceId, args.right);
+    const leftEmbedding = left && (await getOrThrow(ctx, left.embeddingId));
+    const rightEmbedding = right && (await getOrThrow(ctx, right.embeddingId));
+    return {
+      left: left && {
+        title: left.title,
+        text: left.text,
+        embedding: leftEmbedding!.embedding,
+      },
+      right: right && {
+        title: right.title,
+        text: right.text,
+        embedding: rightEmbedding!.embedding,
+      },
+      midpoint,
+    } as const;
+  },
+});
+
+export const upsertMidpoint = internalMutation({
+  args: {
+    ...schema.tables.midpoints.validator.fields,
+    topMatches: v.array(
+      v.object({ embeddingId: v.id("embeddings"), score: v.number() }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const topMatches = await asyncMap(
+      args.topMatches,
+      async ({ embeddingId, score }) => {
+        const text = await getOneFrom(
+          ctx.db,
+          "texts",
+          "embeddingId",
+          embeddingId,
+        );
+        if (!text) throw new Error("Text not found");
+        return { title: text.title, score };
+      },
+    );
+    console.log(topMatches[0]);
+    const midpoint = await ctx.db
+      .query("midpoints")
+      .withIndex("namespaceId", (q) =>
+        q
+          .eq("namespaceId", args.namespaceId)
+          .eq("left", args.left)
+          .eq("right", args.right),
+      )
+      .first();
+    if (midpoint) {
+      await ctx.db.patch(midpoint._id, {
+        midpointEmbedding: args.midpointEmbedding,
+        topMatches,
+      });
+    }
+    const midpointId =
+      midpoint?._id ||
+      (await ctx.db.insert("midpoints", {
+        ...args,
+        topMatches,
+      }));
+    return ctx.db.get(midpointId);
+  },
+});
+
+export const deleteMidpoint = namespaceAdminMutation({
+  args: { midpointId: v.id("midpoints") },
+  handler: async (ctx, args) => {
+    const midpoint = await getOrThrow(ctx, args.midpointId);
+    if (midpoint.namespaceId !== ctx.namespace._id) {
+      throw new Error("Midpoint not in authorized namespace");
+    }
+    const game = await ctx.db
+      .query("games")
+      .filter((q) => q.eq(q.field("midpointId"), args.midpointId))
+      .first();
+    if (game) {
+      throw new Error("Cannot delete midpoint with active game");
+    }
+    await ctx.db.delete(args.midpointId);
+  },
+});
+
+export const makeGame = namespaceAdminMutation({
+  args: {
+    midpointId: v.id("midpoints"),
+  },
+  handler: async (ctx, args) => {
+    const midpoint = await getOrThrow(ctx, args.midpointId);
+    if (midpoint.namespaceId !== ctx.namespace._id) {
+      throw new Error("Midpoint not in authorized namespace");
+    }
+    return ctx.db.insert("games", {
+      namespaceId: ctx.namespace._id,
+      midpointId: args.midpointId,
+      active: false,
+    });
+  },
+});
