@@ -86,10 +86,12 @@ export const getDailyGame = query({
   args: { namespace: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const namespaceName = args.namespace ?? "feelings";
-    const namespace = await ctx.db
-      .query("namespaces")
-      .withIndex("name", (q) => q.eq("name", namespaceName))
-      .unique();
+    const namespace = await getOneFrom(
+      ctx.db,
+      "namespaces",
+      "slug",
+      namespaceName,
+    );
     if (!namespace) {
       console.error("Namespace not found: " + namespaceName);
       return error("Namespace not found");

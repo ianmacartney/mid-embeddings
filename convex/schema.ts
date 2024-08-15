@@ -25,10 +25,11 @@ export default defineSchema({
 
   namespaces: defineTable({
     name: v.string(),
+    slug: v.string(),
     description: v.string(),
     public: v.boolean(),
     createdBy: v.id("users"),
-  }).index("name", ["name"]), // for unique constraint
+  }).index("slug", ["slug"]), // for unique constraint
 
   texts: defineTable({
     title: v.string(),

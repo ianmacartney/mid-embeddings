@@ -86,7 +86,7 @@ async function getUserAndNamespace(ctx: QueryCtx, args: { namespace: string }) {
   const namespace = await getOneFrom(
     ctx.db,
     "namespaces",
-    "name",
+    "slug",
     args.namespace,
   );
   if (!namespace) {
