@@ -92,55 +92,7 @@ function Namespace() {
             />
           </div>
         </div>
-        {texts.results.length === 0 ? (
-          <Textarea
-            placeholder="Add text"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                try {
-                  const results = JSON.parse(e.currentTarget.value);
-                  if (!Array.isArray(results)) {
-                    throw new Error("Must be an array");
-                  }
-                  let titled;
-                  if (typeof results[0] === "string") {
-                    titled = results.map((text) => ({ title: text, text }));
-                  } else {
-                    if (!results[0].title && !results[0].text) {
-                      throw new Error("Must have title and text");
-                    }
-                    titled = results as { title: string; text: string }[];
-                  }
-                  e.currentTarget.blur();
-                  e.currentTarget.disabled = true;
-                  toast({ title: "Adding text" });
-                  Promise.all(
-                    chunk(titled, 1000).map((chunk) =>
-                      addText({ namespace, titled: chunk }),
-                    ),
-                  )
-                    .then(() => {
-                      toast({ title: "Text added" });
-                    })
-                    .catch((e) => {
-                      e.target.disabled = false;
-                      toast({
-                        title: "Error adding text",
-                        description: e.message,
-                      });
-                    });
-                } catch (e) {
-                  toast({
-                    title: "Error adding text",
-                    description: e as string,
-                  });
-                }
-              }
-            }}
-            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-          />
-        ) : (
+        {texts.results.length > 0 && (
           <div className="flex flex-col items-center w-full gap-2">
             <div className="flex gap-4">
               <div className="flex flex-col items-center gap-2">
@@ -269,9 +221,97 @@ function Namespace() {
             </div>
           </div>
         )}
+        <Textarea
+          placeholder="Add text"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const titled = parseText(e.currentTarget.value);
+              e.currentTarget.blur();
+              e.currentTarget.disabled = true;
+              toast({ title: "Adding text" });
+              Promise.all(
+                chunk(titled, 1000).map((chunk) =>
+                  addText({ namespace, titled: chunk }),
+                ),
+              )
+                .then(() => {
+                  toast({ title: "Text added" });
+                })
+                .catch((e) => {
+                  e.target.disabled = false;
+                  toast({
+                    title: "Error adding text",
+                    description: e.message,
+                  });
+                });
+            }
+          }}
+          className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        />
       </main>
     </div>
   );
+}
+
+function checkString(input: unknown): string {
+  if (typeof input !== "string") {
+    throw new Error("Must be a string");
+  }
+  return input;
+}
+
+function checkObject(input: unknown): { title: string; text: string } {
+  if (!input || typeof input !== "object") {
+    throw new Error(`Must be an object: ${input}`);
+  }
+  if ("title" in input && "text" in input) {
+    return { title: checkString(input.title), text: checkString(input.text) };
+  }
+  throw new Error(`Must have title and text: ${input}`);
+}
+
+function parseText(input: string): { title: string; text: string }[] {
+  try {
+    const results = JSON.parse(input);
+    if (!Array.isArray(results)) {
+      throw new Error("Must be an array");
+    }
+    if (typeof results[0] === "string") {
+      return results.map(checkString).map((text) => ({ title: text, text }));
+    } else {
+      return results.map(checkObject);
+    }
+  } catch (e) {
+    const trimmed = input.trim();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      toast({
+        title: "Error adding text",
+        description:
+          (e as string) +
+          `You can add a JSON array of strings or objects like {"title": "foo", "text": "bar"}[] or lines of text separated by newlines`,
+      });
+      throw e;
+    }
+  }
+  const lines = input
+    .split("\n")
+    .map((line) => {
+      let ret = line;
+      if (ret.startsWith('"')) ret = ret.slice(1);
+      if (ret.endsWith(",")) ret = ret.slice(0, -1);
+      if (ret.endsWith('"')) ret = ret.slice(0, -1);
+      return ret;
+    })
+    .filter(Boolean);
+  if (lines.length < 2) {
+    toast({
+      title: "Error adding text",
+      description: "No lines found in input",
+    });
+    throw new Error("No lines found");
+  }
+  return lines.map((text) => ({ title: text, text }));
 }
 
 function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
