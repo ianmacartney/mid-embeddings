@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
   component: () => {
     // TODO: get namespace from env variable, default to first namespace.
     const gameResult = useQuery(api.game.getDailyGame, {
-      namespace: "MixedFeels",
+      namespace: "mixed-meaning",
     });
     if (gameResult && !gameResult.ok) {
       return <div>Error: {gameResult.error}</div>;
