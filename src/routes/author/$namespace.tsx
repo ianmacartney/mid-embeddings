@@ -53,9 +53,8 @@ function Namespace() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen h-full overflow-scroll bg-background text-foreground">
-      <header className="flex items-center justify-between w-full max-w-4xl px-6 py-4">
+      <main className="flex flex-col items-center justify-center w-full max-w-4xl gap-8 px-6 py-8">
         <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-full"></div>
           <div className="flex flex-col">
             <Input
               type="text"
@@ -93,56 +92,54 @@ function Namespace() {
             />
           </div>
         </div>
-      </header>
-      <main className="flex flex-col items-center justify-center w-full max-w-4xl gap-8 px-6 py-8">
         {texts.results.length === 0 ? (
-          <div className="flex items-center gap-2">
-            <Input
-              type="text"
-              placeholder="Add text"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  try {
-                    const results = JSON.parse(e.currentTarget.value);
-                    if (!Array.isArray(results)) {
-                      throw new Error("Must be an array");
-                    }
-                    let titled;
-                    if (typeof results[0] === "string") {
-                      titled = results.map((text) => ({ title: text, text }));
-                    } else {
-                      if (!results[0].title && !results[0].text) {
-                        throw new Error("Must have title and text");
-                      }
-                      titled = results as { title: string; text: string }[];
-                    }
-                    Promise.all(
-                      chunk(titled, 1000).map((chunk) =>
-                        addText({ namespace, titled: chunk }),
-                      ),
-                    )
-                      .then(() => {
-                        toast({ title: "Text added" });
-                      })
-                      .catch((e) => {
-                        toast({
-                          title: "Error adding text",
-                          description: e.message,
-                        });
-                      });
-                  } catch (e) {
-                    toast({
-                      title: "Error adding text",
-                      description: e as string,
-                    });
+          <Textarea
+            placeholder="Add text"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                try {
+                  const results = JSON.parse(e.currentTarget.value);
+                  if (!Array.isArray(results)) {
+                    throw new Error("Must be an array");
                   }
+                  let titled;
+                  if (typeof results[0] === "string") {
+                    titled = results.map((text) => ({ title: text, text }));
+                  } else {
+                    if (!results[0].title && !results[0].text) {
+                      throw new Error("Must have title and text");
+                    }
+                    titled = results as { title: string; text: string }[];
+                  }
+                  e.currentTarget.blur();
+                  e.currentTarget.disabled = true;
+                  toast({ title: "Adding text" });
+                  Promise.all(
+                    chunk(titled, 1000).map((chunk) =>
+                      addText({ namespace, titled: chunk }),
+                    ),
+                  )
+                    .then(() => {
+                      toast({ title: "Text added" });
+                    })
+                    .catch((e) => {
+                      e.target.disabled = false;
+                      toast({
+                        title: "Error adding text",
+                        description: e.message,
+                      });
+                    });
+                } catch (e) {
+                  toast({
+                    title: "Error adding text",
+                    description: e as string,
+                  });
                 }
-              }}
-              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-            />
-            <Button>Add</Button>
-          </div>
+              }
+            }}
+            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          />
         ) : (
           <div className="flex flex-col items-center w-full gap-2">
             <div className="flex gap-4">
@@ -266,7 +263,7 @@ function Namespace() {
                   </div>
                 </div>
               ))}
-              {texts.loadMore && (
+              {texts.status === "CanLoadMore" && (
                 <Button onClick={() => texts.loadMore(100)}>Load more</Button>
               )}
             </div>

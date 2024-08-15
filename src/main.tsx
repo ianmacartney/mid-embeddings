@@ -1,7 +1,7 @@
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { RouterProvider } from "@tanstack/react-router";
 import { ThemeProvider } from "next-themes";
 import { ConvexReactClient } from "convex/react";
 import "./index.css";

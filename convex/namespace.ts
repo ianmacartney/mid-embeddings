@@ -10,6 +10,7 @@ import {
   namespaceAdminMutation,
   namespaceAdminQuery,
   userMutation,
+  userQuery,
 } from "./functions";
 import schema from "./schema";
 import { asyncMapChunked, chunk, embed, embedBatch } from "./llm";
@@ -17,11 +18,36 @@ import { calculateMidpoint } from "./linearAlgebra";
 import { partial } from "convex-helpers/validators";
 import { getTextByTitle } from "./embed";
 import { paginationOptsValidator } from "convex/server";
+import { omit } from "convex-helpers";
 
-/**
- * [ ] compare some embeddings between words & feelings - are they even right?
- * [ ] why were some feelings not even matching with themselves?
- */
+export const listNamespaces = userQuery({
+  args: {},
+  handler: async (ctx, args) => {
+    if (!ctx.user) {
+      return [];
+    }
+
+    return getManyFrom(ctx.db, "namespaces", "createdBy", ctx.user?._id);
+  },
+});
+
+export const upsertNamespace = userMutation({
+  args: omit(schema.tables.namespaces.validator.fields, ["createdBy"]),
+  handler: async (ctx, args) => {
+    // TODO: check that the user is allowed to create a namespace
+    if (!ctx.user) {
+      throw new Error("Not authenticated");
+    }
+    const existing = await getOneFrom(ctx.db, "namespaces", "slug", args.name);
+    if (existing) {
+      if (existing.createdBy !== ctx.user._id) {
+        throw new Error("Namespace already exists");
+      }
+      return existing._id;
+    }
+    return ctx.db.insert("namespaces", { ...args, createdBy: ctx.user._id });
+  },
+});
 
 export const listGamesByNamespace = namespaceAdminQuery({
   args: {},
@@ -38,24 +64,6 @@ export const listGamesByNamespace = namespaceAdminQuery({
         };
       },
     );
-  },
-});
-
-export const upsertNamespace = userMutation({
-  args: schema.tables.namespaces.validator.fields,
-  handler: async (ctx, args) => {
-    // TODO: check that the user is allowed to create a namespace
-    if (!ctx.user) {
-      throw new Error("Not authenticated");
-    }
-    const existing = await getOneFrom(ctx.db, "namespaces", "slug", args.name);
-    if (existing) {
-      if (existing.createdBy !== ctx.user._id) {
-        throw new Error("Namespace already exists");
-      }
-      return existing._id;
-    }
-    return ctx.db.insert("namespaces", args);
   },
 });
 
@@ -96,20 +104,21 @@ export const addText = namespaceAdminAction({
     console.debug(`Embedding ${textsToEmbed.length} texts`);
     await Promise.all(
       chunk(textsToEmbed).map(async (chunk, i) => {
-        console.debug(`Starting ${i} (${chunk.length})`);
+        console.debug(`Starting chunk ${i} (${chunk.length})`);
         const embeddings = await embedBatch(chunk.map((t) => t.text));
         const toInsert = embeddings.map((embedding, i) => {
           const { title, text } = chunk[i];
           return { title, text, embedding };
         });
-        console.debug(`Finished ${i} (${chunk.length})`);
+        console.debug(`Finished chunk ${i} (${chunk.length})`);
         await ctx.runMutation(internal.embed.insertTexts, {
           namespaceId: ctx.namespace._id,
           texts: toInsert,
         });
-        console.debug(`Added ${i} (${chunk.length})`);
+        console.debug(`Added chunk ${i} (${chunk.length})`);
       }),
     );
+    console.debug(`Finished adding ${texts.length} texts`);
     return textsToEmbed.length;
   },
 });
@@ -267,7 +276,6 @@ export const upsertMidpoint = internalMutation({
         return { title: text.title, score };
       },
     );
-    console.log(topMatches[0]);
     const midpoint = await ctx.db
       .query("midpoints")
       .withIndex("namespaceId", (q) =>
@@ -296,8 +304,8 @@ export const upsertMidpoint = internalMutation({
 export const deleteMidpoint = namespaceAdminMutation({
   args: { midpointId: v.id("midpoints") },
   handler: async (ctx, args) => {
-    const midpoint = await getOrThrow(ctx, args.midpointId);
-    if (midpoint.namespaceId !== ctx.namespace._id) {
+    const midpoint = await ctx.db.get(args.midpointId);
+    if (midpoint && midpoint.namespaceId !== ctx.namespace._id) {
       throw new Error("Midpoint not in authorized namespace");
     }
     const game = await ctx.db
@@ -307,7 +315,9 @@ export const deleteMidpoint = namespaceAdminMutation({
     if (game) {
       throw new Error("Cannot delete midpoint with active game");
     }
-    await ctx.db.delete(args.midpointId);
+    if (midpoint) {
+      await ctx.db.delete(args.midpointId);
+    }
   },
 });
 

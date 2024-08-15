@@ -28,7 +28,10 @@ export const populateTextsFromCache = internalMutation({
       args.texts.map(async ({ title, text }) => {
         const existing = await getTextByTitle(ctx, args.namespaceId, title);
         if (existing && existing.text === text) return null;
-        const matching = await getOneFrom(ctx.db, "texts", "text", text);
+        const matching = await ctx.db
+          .query("texts")
+          .withIndex("text", (q) => q.eq("text", text))
+          .first();
         if (!matching) return { title, text }; // we need to embed this text
         const { embedding } = await getOrThrow(ctx, matching.embeddingId);
         // We can copy over from a matching text

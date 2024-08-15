@@ -29,7 +29,9 @@ export default defineSchema({
     description: v.string(),
     public: v.boolean(),
     createdBy: v.id("users"),
-  }).index("slug", ["slug"]), // for unique constraint
+  })
+    .index("slug", ["slug"]) // for unique constraint
+    .index("createdBy", ["createdBy"]),
 
   texts: defineTable({
     title: v.string(),
