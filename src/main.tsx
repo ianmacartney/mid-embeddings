@@ -17,7 +17,10 @@ const rootElement = document.getElementById("root")!;
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <ThemeProvider attribute="class">
-      <ConvexAuthProvider client={convex}>
+      <ConvexAuthProvider
+        client={convex}
+        replaceURL={(to) => router.navigate({ to, replace: true })}
+      >
         <RouterProvider router={router} />
       </ConvexAuthProvider>
     </ThemeProvider>
