@@ -4,6 +4,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { toast } from "./components/ui/use-toast";
 import dayjs from "dayjs";
+import { ComponentProps } from "react";
 
 export function SignInForm() {
   return (
@@ -13,7 +14,7 @@ export function SignInForm() {
           <h2 className="font-semibold text-2xl tracking-tight">
             Sign in or create an account
           </h2>
-          <SignInWithGitHub />
+          <SignInWithGitHub className="flex-1" />
           <SignInMethodDivider />
           <SignInAnonymously />
         </>
@@ -22,19 +23,18 @@ export function SignInForm() {
   );
 }
 
-export function SignInWithGitHub() {
+export function SignInWithGitHub(props: ComponentProps<"button">) {
   const { signIn } = useAuthActions();
-  // TODO: redirect back to the current page after sign in
   return (
     <Button
-      className="flex-1"
       variant="outline"
       type="button"
       onClick={() =>
         void signIn("github", { redirectTo: window.location.href })
       }
+      {...props}
     >
-      <GitHubLogoIcon className="mr-2 h-4 w-4" /> GitHub
+      <GitHubLogoIcon className="mr-2 h-4 w-4" /> Sign in with GitHub
     </Button>
   );
 }

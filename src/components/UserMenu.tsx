@@ -9,23 +9,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { GitHubLogoIcon, PersonIcon } from "@radix-ui/react-icons";
+import { PersonIcon } from "@radix-ui/react-icons";
 import { api } from "@convex/_generated/api";
 import { useQuery } from "convex/react";
+import { SignInWithGitHub } from "@/SignInForm";
 
 export function UserMenu() {
   const user = useQuery(api.users.viewer);
-  const { signIn } = useAuthActions();
-  if (!user || user.isAnonymous)
-    return (
-      <Button
-        variant="outline"
-        type="button"
-        onClick={() => void signIn("github")}
-      >
-        <GitHubLogoIcon className="mr-2 h-4 w-4" /> Sign in with GitHub
-      </Button>
-    );
+  if (!user) return null;
+  if (user.isAnonymous) return <SignInWithGitHub />;
   return (
     <div className="flex items-center gap-2 text-sm font-medium">
       {user.name}
