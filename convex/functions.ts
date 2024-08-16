@@ -1,9 +1,10 @@
 import { v, Validator } from "convex/values";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { DataModel, Doc, Id } from "./_generated/dataModel";
 import {
   action,
   DatabaseReader,
+  internalAction,
   internalMutation,
   internalQuery,
   mutation,
@@ -19,10 +20,13 @@ import {
 import { auth } from "./auth";
 import { makeActionRetrier } from "convex-helpers/server/retries";
 import { makeMigration } from "convex-helpers/server/migrations";
-import type { TableNamesInDataModel } from "convex/server";
+import type {
+  FieldPaths,
+  NamedTableInfo,
+  TableNamesInDataModel,
+} from "convex/server";
 import schema from "./schema";
 import { getOneFrom } from "convex-helpers/server/relationships";
-import { systemFields } from "convex-helpers/validators";
 
 export const { runWithRetries, retry } = makeActionRetrier("functions:retry");
 export const migration = makeMigration(internalMutation, {
@@ -141,18 +145,29 @@ export function resultValidator<T extends Validator<any, "required", any>>(
   );
 }
 
+function withSystemFields(validator: Validator<any, any, any>): any {
+  switch (validator.kind) {
+    case "union":
+      return v.union(...validator.members.map(withSystemFields));
+    case "object":
+      return v.object({
+        ...validator.fields,
+        _id: v.id("namespaces"),
+        _creationTime: v.number(),
+      });
+  }
+}
+
 export const vv = {
   id: <Table extends TableNamesInDataModel<DataModel>>(table: Table) =>
     v.id(table),
-  doc: <Table extends TableNamesInDataModel<DataModel>>(table: Table) => {
-    if (schema.tables[table]!.validator.kind !== "object") {
-      throw new Error(
-        `Table ${table} must be an object validator, not ${schema.tables[table].validator.kind}`,
-      );
-    }
-    return v.object({
-      ...schema.tables[table].validator.fields,
-      ...systemFields(table),
-    });
+  doc: <Table extends TableNamesInDataModel<DataModel>>(
+    table: Table,
+  ): Validator<
+    Doc<Table>,
+    "required",
+    FieldPaths<NamedTableInfo<DataModel, Table>>
+  > => {
+    return withSystemFields(schema.tables[table].validator);
   },
 };
