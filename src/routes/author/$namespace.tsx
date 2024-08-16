@@ -416,7 +416,6 @@ function Midpoint({
         onClick={() => {
           search({ namespace, left, right, skipCache: true }).then(
             (results) => {
-              console.log(results.topMatches[0]);
               setMidpoint(results);
             },
           );

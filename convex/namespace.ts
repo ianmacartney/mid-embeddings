@@ -246,17 +246,22 @@ export const getMidpoint = internalQuery({
   handler: lookupMidpoint,
 });
 
+const midpointFields = schema.tables.midpoints.validator.fields;
+
 export const upsertMidpoint = internalMutation({
   args: {
-    ...schema.tables.midpoints.validator.fields,
+    ...midpointFields,
     topMatches: v.array(
-      v.object({ embeddingId: v.id("embeddings"), score: v.number() }),
+      v.object({
+        embeddingId: v.id("embeddings"),
+        ...omit(midpointFields.topMatches.element.fields, ["title"]),
+      }),
     ),
   },
   handler: async (ctx, args) => {
     const topMatches = await asyncMap(
       args.topMatches,
-      async ({ embeddingId, score }) => {
+      async ({ embeddingId, ...rest }) => {
         const text = await getOneFrom(
           ctx.db,
           "texts",
@@ -264,7 +269,7 @@ export const upsertMidpoint = internalMutation({
           embeddingId,
         );
         if (!text) throw new Error("Text not found");
-        return { title: text.title, score };
+        return { title: text.title, ...rest };
       },
     );
     const midpoint = await ctx.db
