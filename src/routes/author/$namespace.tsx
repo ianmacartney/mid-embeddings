@@ -177,6 +177,11 @@ function Namespace() {
                     </Button>
                   </div>
                 ))}
+                {midpoints.status === "CanLoadMore" && (
+                  <Button onClick={() => midpoints.loadMore(10)}>
+                    Load more
+                  </Button>
+                )}
               </div>
               <div className="flex flex-col items-center gap-2">
                 <span className="text-3xl font-bold">Games</span>
