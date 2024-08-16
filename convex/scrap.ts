@@ -1,5 +1,5 @@
 import { CONFIG, embed, embedBatch } from "./llm";
-import { v } from "convex/values";
+import { v, Validator } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import {
@@ -13,9 +13,12 @@ import {
   QueryCtx,
 } from "./_generated/server";
 import schema from "./schema";
-import { getManyFrom, getOneFrom } from "convex-helpers/server/relationships";
 import {
   getOrThrow,
+  getManyFrom,
+  getOneFrom,
+} from "convex-helpers/server/relationships";
+import {
   migration,
   namespaceAdminQuery,
   userAction,
@@ -25,43 +28,43 @@ import { dotProduct, calculateMidpoint } from "./linearAlgebra";
 import { paginationOptsValidator } from "convex/server";
 import { asyncMap } from "convex-helpers";
 import { populateTextsFromCache } from "./embed";
-// import feels from "../feels.json";
-// import { chunk } from "./llm";
-// import { asyncMap } from "convex-helpers";
-// export const deleteFeels = internalMutation({
-//   handler: async (ctx) => {
-//     await Promise.all(
-//       chunk(feels as string[]).map((feels) =>
-//         ctx.scheduler.runAfter(0, internal.functions.deleteFeelsBatch, {
-//           feels,
-//         }),
-//       ),
-//     );
-//   },
-// });
+import feels from "../feels.json";
+import { chunk } from "./llm";
 
-// export const deleteFeelsBatch = internalMutation({
-//   handler: async (ctx, args: { feels: string[] }) => {
-//     await Promise.all(
-//       args.feels.map(async (feel) => {
-//         return asyncMap(
-//           ctx.db
-//             .query("texts")
-//             .withIndex("text", (q) => q.eq("text", feel))
-//             .collect(),
-//           (text) =>
-//             ctx.db.delete(text.embeddingId).then(() => ctx.db.delete(text._id)),
-//         );
-//       }),
-//     );
-//     console.debug(
-//       "Deleted",
-//       args.feels[0],
-//       "...",
-//       args.feels[args.feels.length - 1],
-//     );
-//   },
-// });
+export const deleteFeels = internalMutation({
+  handler: async (ctx) => {
+    await Promise.all(
+      chunk(feels as string[]).map((feels) =>
+        ctx.scheduler.runAfter(0, internal.scrap.deleteFeelsBatch, {
+          feels,
+        }),
+      ),
+    );
+  },
+});
+
+export const deleteFeelsBatch = internalMutation({
+  handler: async (ctx, args: { feels: string[] }) => {
+    await Promise.all(
+      args.feels.map(async (feel) => {
+        return asyncMap(
+          ctx.db
+            .query("texts")
+            .withIndex("text", (q) => q.eq("text", feel))
+            .collect(),
+          (text) =>
+            ctx.db.delete(text.embeddingId).then(() => ctx.db.delete(text._id)),
+        );
+      }),
+    );
+    console.debug(
+      "Deleted",
+      args.feels[0],
+      "...",
+      args.feels[args.feels.length - 1],
+    );
+  },
+});
 
 // import { Auth } from "convex/server";
 // const TOKEN_SUB_CLAIM_DIVIDER = "|";

@@ -13,8 +13,7 @@ import {
 } from "./functions";
 import schema from "./schema";
 import { embed } from "./llm";
-import { deltaVector, dotProduct, vectorLength } from "./linearAlgebra";
-import { getTextByTitle } from "./embed";
+import { dotProduct } from "./linearAlgebra";
 
 const gameValidator = v.object({
   gameId: vv.id("games"),
