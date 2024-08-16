@@ -21,10 +21,7 @@ const gameValidator = v.object({
   gameId: vv.id("games"),
   left: v.string(),
   right: v.string(),
-  // TODO: doc validator
-  ...schema.tables.namespaces.validator.fields,
-  _id: v.id("namespaces"),
-  _creationTime: v.number(),
+  ...vv.doc("namespaces").fields,
 });
 export type GameInfo = Infer<typeof gameValidator>;
 
