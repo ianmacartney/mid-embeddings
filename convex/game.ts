@@ -1,11 +1,10 @@
 import { Infer, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, query } from "./_generated/server";
-import { getOneFrom } from "convex-helpers/server/relationships";
+import { getOneFrom, getOrThrow } from "convex-helpers/server/relationships";
 import { pick } from "convex-helpers";
 import {
   error,
-  getOrThrow,
   ok,
   resultValidator,
   userAction,

@@ -156,13 +156,3 @@ export const vv = {
     });
   },
 };
-
-export async function getOrThrow<
-  Table extends TableNamesInDataModel<DataModel>,
->(ctx: { db: DatabaseReader }, id: Id<Table>): Promise<Doc<Table>> {
-  const doc = await ctx.db.get(id);
-  if (!doc) {
-    throw new Error(`Could not find id ${id}`);
-  }
-  return doc;
-}

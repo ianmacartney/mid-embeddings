@@ -2,10 +2,13 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Doc } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
-import { getManyFrom, getOneFrom } from "convex-helpers/server/relationships";
-import { asyncMap } from "convex-helpers";
 import {
   getOrThrow,
+  getManyFrom,
+  getOneFrom,
+} from "convex-helpers/server/relationships";
+import { asyncMap } from "convex-helpers";
+import {
   namespaceAdminAction,
   namespaceAdminMutation,
   namespaceAdminQuery,
