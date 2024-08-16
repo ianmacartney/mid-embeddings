@@ -64,7 +64,8 @@ export default defineSchema({
 
   games: defineTable({
     namespaceId: v.id("namespaces"),
-    midpointId: v.id("midpoints"),
+    left: v.string(), // titles
+    right: v.string(),
     active: v.boolean(),
     // scheduledStarterId: v.id("_scheduled_functions"),
     // endedAt: v.union(v.number(), v.null()),

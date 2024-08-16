@@ -1,7 +1,11 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { Doc } from "./_generated/dataModel";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { Doc, Id } from "./_generated/dataModel";
+import {
+  DatabaseReader,
+  internalMutation,
+  internalQuery,
+} from "./_generated/server";
 import {
   getOrThrow,
   getManyFrom,
@@ -19,7 +23,6 @@ import schema from "./schema";
 import { asyncMapChunked, chunk, embed, embedBatch } from "./llm";
 import { calculateMidpoint } from "./linearAlgebra";
 import { partial } from "convex-helpers/validators";
-import { getTextByTitle } from "./embed";
 import { paginationOptsValidator } from "convex/server";
 import { omit } from "convex-helpers";
 
@@ -54,19 +57,12 @@ export const upsertNamespace = userMutation({
 
 export const listGamesByNamespace = namespaceAdminQuery({
   args: {},
-  handler: async (ctx, args) => {
-    return asyncMap(
-      getManyFrom(ctx.db, "games", "namespaceId", ctx.namespace._id),
-      async (game) => {
-        const midpoint = await getOrThrow(ctx, game.midpointId);
-        return {
-          _id: game._id,
-          active: game.active,
-          left: midpoint.left,
-          right: midpoint.right,
-        };
-      },
-    );
+  handler: async (ctx) => {
+    return ctx.db
+      .query("games")
+      .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
+      .order("desc")
+      .take(20);
   },
 });
 
@@ -226,23 +222,28 @@ export const midpointSearch = namespaceAdminAction({
   },
 });
 
+export async function lookupMidpoint(
+  ctx: { db: DatabaseReader },
+  args: { namespaceId: Id<"namespaces">; left: string; right: string },
+) {
+  return ctx.db
+    .query("midpoints")
+    .withIndex("namespaceId", (q) =>
+      q
+        .eq("namespaceId", args.namespaceId)
+        .eq("left", args.left)
+        .eq("right", args.right),
+    )
+    .unique();
+}
+
 export const getMidpoint = internalQuery({
   args: {
     namespaceId: v.id("namespaces"),
     left: v.string(),
     right: v.string(),
   },
-  handler: async (ctx, args) => {
-    return ctx.db
-      .query("midpoints")
-      .withIndex("namespaceId", (q) =>
-        q
-          .eq("namespaceId", args.namespaceId)
-          .eq("left", args.left)
-          .eq("right", args.right),
-      )
-      .first();
-  },
+  handler: lookupMidpoint,
 });
 
 export const upsertMidpoint = internalMutation({
@@ -298,14 +299,16 @@ export const deleteMidpoint = namespaceAdminMutation({
     if (midpoint && midpoint.namespaceId !== ctx.namespace._id) {
       throw new Error("Midpoint not in authorized namespace");
     }
-    const game = await ctx.db
-      .query("games")
-      .filter((q) => q.eq(q.field("midpointId"), args.midpointId))
-      .first();
-    if (game) {
-      throw new Error("Cannot delete midpoint with active game");
-    }
     if (midpoint) {
+      const game = await ctx.db
+        .query("games")
+        .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
+        .filter((q) => q.eq(q.field("left"), midpoint.left))
+        .filter((q) => q.eq(q.field("right"), midpoint.right))
+        .first();
+      if (game) {
+        throw new Error("Cannot delete midpoint with active game");
+      }
       await ctx.db.delete(args.midpointId);
     }
   },
@@ -313,16 +316,22 @@ export const deleteMidpoint = namespaceAdminMutation({
 
 export const makeGame = namespaceAdminMutation({
   args: {
-    midpointId: v.id("midpoints"),
+    left: v.string(),
+    right: v.string(),
   },
   handler: async (ctx, args) => {
-    const midpoint = await getOrThrow(ctx, args.midpointId);
-    if (midpoint.namespaceId !== ctx.namespace._id) {
+    const midpoint = await lookupMidpoint(ctx, {
+      ...args,
+      namespaceId: ctx.namespace._id,
+    });
+    if (!midpoint) {
+      throw new Error("Midpoint not found");
+    } else if (midpoint.namespaceId !== ctx.namespace._id) {
       throw new Error("Midpoint not in authorized namespace");
     }
     return ctx.db.insert("games", {
+      ...args,
       namespaceId: ctx.namespace._id,
-      midpointId: args.midpointId,
       active: false,
     });
   },

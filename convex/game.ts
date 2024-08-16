@@ -2,7 +2,7 @@ import { Infer, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, query } from "./_generated/server";
 import { getOneFrom, getOrThrow } from "convex-helpers/server/relationships";
-import { pick } from "convex-helpers";
+import { pick, nullThrows } from "convex-helpers";
 import {
   error,
   ok,
@@ -14,6 +14,7 @@ import {
 import schema from "./schema";
 import { embed } from "./llm";
 import { dotProduct } from "./linearAlgebra";
+import { lookupMidpoint } from "./namespace";
 
 const gameValidator = v.object({
   gameId: vv.id("games"),
@@ -52,11 +53,10 @@ export const getDailyGame = query({
       return error("No active games found");
     }
     // TODO: if future games are invite-only / not public, check access
-    const midpoint = await getOrThrow(ctx, game.midpointId);
     return ok({
       ...namespace,
       gameId: game._id,
-      ...pick(midpoint, ["left", "right"]),
+      ...pick(game, ["left", "right"]),
     });
   },
 });
@@ -65,8 +65,7 @@ export const getGame = query({
   args: { gameId: v.id("games") },
   handler: async (ctx, args) => {
     const game = await getOrThrow(ctx, args.gameId);
-    const midpoint = await getOrThrow(ctx, game.midpointId);
-    return ok(pick(midpoint, ["left", "right"]));
+    return ok(pick(game, ["left", "right"]));
   },
 });
 
@@ -115,7 +114,13 @@ export const insertGuess = internalMutation({
   },
   handler: async (ctx, { embedding, ...args }) => {
     const game = await getOrThrow(ctx, args.gameId);
-    const midpoint = await getOrThrow(ctx, game.midpointId);
+    const midpoint = nullThrows(
+      await lookupMidpoint(ctx, {
+        namespaceId: game.namespaceId,
+        left: game.left,
+        right: game.right,
+      }),
+    );
     const score = dotProduct(midpoint.midpointEmbedding, embedding);
     const leftDistance = dotProduct(midpoint.leftEmbedding, embedding);
     const rightDistance = dotProduct(midpoint.rightEmbedding, embedding);

@@ -430,7 +430,7 @@ function Midpoint({
             toast({ title: "No midpoint selected" });
             return;
           }
-          makeGame({ namespace, midpointId: midpoint._id });
+          makeGame({ namespace, left: midpoint.left, right: midpoint.right });
         }}
       >
         Create Game
