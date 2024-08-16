@@ -1,12 +1,34 @@
 import { Toaster } from "@/components/ui/toaster";
 import { UserMenu } from "@/components/UserMenu";
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
-import { Authenticated, Unauthenticated } from "convex/react";
+import {
+  Authenticated,
+  ConvexReactClient,
+  Unauthenticated,
+} from "convex/react";
 import { ReactNode } from "react";
 
+const convex = new ConvexReactClient(
+  import.meta.env.VITE_CONVEX_URL as string,
+  { verbose: true },
+);
+
 export const Route = createRootRoute({
-  component: () => (
+  component: App,
+});
+
+function App() {
+  return (
+    <ConvexAuthProvider client={convex}>
+      <Content />
+    </ConvexAuthProvider>
+  );
+}
+
+function Content() {
+  return (
     <div className="flex h-screen w-full flex-col">
       <header className="sticky top-0 z-10 flex min-h-20 border-b bg-background/80 backdrop-blur">
         <nav className="container w-full justify-between flex flex-row items-center gap-6">
@@ -25,6 +47,7 @@ export const Route = createRootRoute({
             </div>
           </div>
           <Unauthenticated>
+            {/* TODO: make login a popover */}
             <Link
               to="/login"
               className="text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground"
@@ -55,9 +78,8 @@ export const Route = createRootRoute({
       </footer>
       <TanStackRouterDevtools position="bottom-right" />
     </div>
-  ),
-});
-
+  );
+}
 function FooterLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a
