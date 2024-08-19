@@ -10,6 +10,7 @@ import {
   getOrThrow,
   getManyFrom,
   getOneFrom,
+  getOneFromOrThrow,
 } from "convex-helpers/server/relationships";
 import { asyncMap } from "convex-helpers";
 import {
@@ -21,10 +22,12 @@ import {
 } from "./functions";
 import schema from "./schema";
 import { asyncMapChunked, chunk, embed, embedBatch } from "./llm";
-import { calculateMidpoint } from "./linearAlgebra";
+import { calculateMidpoint, dotProduct } from "./linearAlgebra";
 import { partial } from "convex-helpers/validators";
-import { paginationOptsValidator } from "convex/server";
+import { FunctionArgs, paginationOptsValidator } from "convex/server";
 import { omit } from "convex-helpers";
+import { pick } from "convex-helpers";
+import { nullThrows } from "convex-helpers";
 
 export const listNamespaces = userQuery({
   args: {},
@@ -204,11 +207,21 @@ export const midpointSearch = namespaceAdminAction({
     const topMatches = await ctx
       .vectorSearch("embeddings", "embedding", {
         vector: midpointEmbedding,
-        limit: 100,
+        limit: 102, // extra two to account for the left and right embeddings
         filter: (q) => q.eq("namespaceId", ctx.namespace._id),
       })
       .then((results) =>
-        results.map(({ _id, _score }) => ({ embeddingId: _id, score: _score })),
+        results.map(
+          ({ _id, _score }) =>
+            ({
+              embeddingId: _id,
+              score: _score,
+              // leftRank: 0,
+              // rightRank: 0,
+            }) satisfies FunctionArgs<
+              typeof internal.namespace.upsertMidpoint
+            >["topMatches"][0],
+        ),
       );
     return ctx.runMutation(internal.namespace.upsertMidpoint, {
       left: args.left,
@@ -262,22 +275,30 @@ export const upsertMidpoint = internalMutation({
     topMatches: v.array(
       v.object({
         embeddingId: v.id("embeddings"),
-        ...omit(midpointFields.topMatches.element.fields, ["title"]),
+        ...pick(midpointFields.topMatches.element.fields, ["score"]),
       }),
     ),
   },
   handler: async (ctx, args) => {
-    const topMatches = await asyncMap(
+    const topMatches: Doc<"midpoints">["topMatches"] = await asyncMap(
       args.topMatches,
       async ({ embeddingId, ...rest }) => {
-        const text = await getOneFrom(
+        const text = await getOneFromOrThrow(
           ctx.db,
           "texts",
           "embeddingId",
           embeddingId,
         );
-        if (!text) throw new Error("Text not found");
-        return { title: text.title, ...rest };
+        const embedding = await getOrThrow(ctx, embeddingId);
+        const leftScore = dotProduct(args.leftEmbedding, embedding.embedding);
+        const rightScore = dotProduct(args.rightEmbedding, embedding.embedding);
+        return {
+          title: text.title,
+          leftScore,
+          rightScore,
+          lxrScore: leftScore * rightScore,
+          ...rest,
+        };
       },
     );
     const midpoint = await ctx.db
@@ -324,6 +345,52 @@ export const deleteMidpoint = namespaceAdminMutation({
       }
       await ctx.db.delete(args.midpointId);
     }
+  },
+});
+
+export const makeGuess = namespaceAdminAction({
+  args: { guess: v.string(), left: v.string(), right: v.string() },
+  handler: async (ctx, args) => {
+    const embedding = await embed(args.guess);
+    const results: {
+      rank: number;
+      score: number;
+      leftScore: number;
+      rightScore: number;
+      lxrScore: number;
+    } = await ctx.runQuery(internal.namespace.calculateGuess, {
+      namespaceId: ctx.namespace._id,
+      embedding,
+      ...omit(args, ["guess"]),
+    });
+    return { ...results, guess: args.guess };
+  },
+});
+
+export const calculateGuess = internalQuery({
+  args: {
+    namespaceId: v.id("namespaces"),
+    left: v.string(),
+    right: v.string(),
+    embedding: v.array(v.number()),
+  },
+  handler: async (ctx, { embedding, ...args }) => {
+    const midpoint = nullThrows(await lookupMidpoint(ctx, args));
+    const score = dotProduct(midpoint.midpointEmbedding, embedding);
+    const leftScore = dotProduct(midpoint.leftEmbedding, embedding);
+    const rightScore = dotProduct(midpoint.rightEmbedding, embedding);
+    const lxrScore = leftScore * rightScore;
+    const rank = findRank(
+      midpoint.topMatches.map((m) => m.score),
+      score,
+    );
+    return {
+      rank,
+      score,
+      leftScore,
+      rightScore,
+      lxrScore,
+    };
   },
 });
 

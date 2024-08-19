@@ -10,10 +10,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { FunctionReturnType } from "convex/server";
-import { Cross1Icon, TrashIcon } from "@radix-ui/react-icons";
+import { CheckboxIcon, Cross1Icon, TrashIcon } from "@radix-ui/react-icons";
 import { chunk } from "@/lib/utils";
 
 export const Route = createFileRoute("/author/$namespace")({
@@ -45,6 +45,12 @@ function Namespace() {
     });
   }, [words.left, words.right, midpoints.results[0]]);
 
+  const [guessResults, setGuessResults] = useState<
+    FunctionReturnType<typeof fn.makeGuess>[]
+  >([]);
+
+  const [useLXR, setUseLXR] = useState(false);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen h-full overflow-scroll bg-background text-foreground">
       <main className="flex flex-col items-center justify-center w-full max-w-4xl gap-8 px-6 py-8">
@@ -56,7 +62,6 @@ function Namespace() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  console.log("ho");
                   updateNamespace({
                     namespace,
                     name: e.currentTarget.value,
@@ -84,26 +89,36 @@ function Namespace() {
                 }).then(() => toast({ title: "Description updated" }))
               }
             />
+            <div className="flex items-center gap-2">
+              <label htmlFor="lxr" className="flex items-center gap-2">
+                Use left X right to sort?
+              </label>
+              <input
+                id="lxr"
+                type="checkbox"
+                checked={useLXR}
+                onClick={() => {
+                  setUseLXR((lxr) => !lxr);
+                }}
+              />
+            </div>
           </div>
         </div>
         {!isEmpty && (
           <div className="flex flex-col items-center w-full gap-2">
             <div className="flex gap-4">
-              <div className="flex flex-col items-center gap-2">
-                <Input
-                  type="text"
-                  placeholder="Left"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const left = e.currentTarget.value;
-                      e.preventDefault();
-                      setWords((words) => ({ ...words, left }));
-                    }
-                  }}
-                  className="max-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                />
-                <BasicSearch namespace={namespace} text={words.left} />
-              </div>
+              <Input
+                type="text"
+                placeholder="Left"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const left = e.currentTarget.value;
+                    e.preventDefault();
+                    setWords((words) => ({ ...words, left }));
+                  }
+                }}
+                className="max-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              />
               <div className="flex flex-col items-center gap-2">
                 <Input
                   type="text"
@@ -112,33 +127,65 @@ function Namespace() {
                     if (e.key === "Enter") {
                       e.preventDefault();
                       const guess = e.currentTarget.value;
+                      e.currentTarget.value = "";
+                      if (guessResults.some((r) => r.guess === guess)) {
+                        toast({ title: "Guess already made" });
+                        return;
+                      }
+                      convex
+                        .action(fn.makeGuess, { ...words, guess, namespace })
+                        .then((results) =>
+                          setGuessResults((arr) => [...arr, results]),
+                        )
+                        .catch((e) => {
+                          e.currentTarget.value = guess;
+                          toast({
+                            title: "Error making guess",
+                            description: e.message,
+                          });
+                        });
                       setWords((words) => ({ ...words, guess }));
                     }
                   }}
                   className="max-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 />
-                <div className="text-lg"> {words.guess}</div>
-                <Midpoint
-                  namespace={namespace}
-                  left={words.left}
-                  right={words.right}
-                />
+                {[...guessResults]
+                  .sort((a, b) =>
+                    useLXR ? b.lxrScore - a.lxrScore : b.score - a.score,
+                  )
+                  .slice(0, 10)
+                  .map((guess, i) => (
+                    <div
+                      key={guess.guess + i}
+                      className="px-3 py-1 text-sm font-medium rounded-md bg-muted text-muted-foreground"
+                    >
+                      {f(guess.leftScore)} ⬅️ {guess.guess}: {guess.rank}(
+                      {f(guess.score)}) ➡️ {f(guess.rightScore)}
+                    </div>
+                  ))}
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <Input
-                  type="text"
-                  placeholder="Right"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const right = e.currentTarget.value;
-                      setWords((words) => ({ ...words, right }));
-                    }
-                  }}
-                  className="max-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                />
-                <BasicSearch namespace={namespace} text={words.right} />
-              </div>
+              <Input
+                type="text"
+                placeholder="Right"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const right = e.currentTarget.value;
+                    setWords((words) => ({ ...words, right }));
+                  }
+                }}
+                className="max-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+            <div className="flex gap-4 w-full">
+              <BasicSearch namespace={namespace} text={words.left} />
+              <Midpoint
+                namespace={namespace}
+                left={words.left}
+                right={words.right}
+                useLXR={useLXR}
+              />
+              <BasicSearch namespace={namespace} text={words.right} />
             </div>
 
             <div className="flex justify-between gap-4">
@@ -236,6 +283,7 @@ function Namespace() {
               e.currentTarget.blur();
               e.currentTarget.disabled = true;
               toast({ title: "Adding text" });
+              const target = e.target as HTMLTextAreaElement;
               Promise.all(
                 chunk(titled, 1000).map((chunk) =>
                   convex.action(fn.addText, { namespace, titled: chunk }),
@@ -243,13 +291,16 @@ function Namespace() {
               )
                 .then(() => {
                   toast({ title: "Text added" });
+                  target.value = "";
                 })
                 .catch((e) => {
-                  e.target.disabled = false;
                   toast({
                     title: "Error adding text",
                     description: e.message,
                   });
+                })
+                .finally(() => {
+                  target.disabled = false;
                 });
             }
           }}
@@ -382,15 +433,23 @@ function Midpoint({
   namespace,
   left,
   right,
+  useLXR,
 }: {
   namespace: string;
   right: string;
   left: string;
+  useLXR: boolean;
 }) {
   const search = useAction(fn.midpointSearch);
   const makeGame = useMutation(fn.makeGame);
   const [midpoint, setMidpoint] =
     useState<FunctionReturnType<typeof fn.midpointSearch>>();
+  const sorted = useMemo(() => {
+    if (!midpoint) return [];
+    return [...midpoint.topMatches].sort((a, b) =>
+      useLXR ? b.lxrScore - a.lxrScore : b.score - a.score,
+    );
+  }, [midpoint, useLXR]);
   useEffect(() => {
     if (!left || !right) return;
     search({ namespace, left, right }).then((results) => {
@@ -403,12 +462,13 @@ function Midpoint({
         {left} - {right}
       </div>
       <div className="flex flex-col justify-center gap-2">
-        {midpoint?.topMatches.slice(0, 10).map((result, i) => (
+        {sorted.slice(0, 10).map((result, i) => (
           <div
             key={result.title + i}
             className="px-3 py-1 text-sm font-medium rounded-md bg-muted text-muted-foreground"
           >
-            {result.title} - {f(result.score)}
+            {f(result.leftScore)} ⬅️ {result.title}:{f(result.score)} ➡️{" "}
+            {f(result.rightScore)}
           </div>
         ))}
       </div>

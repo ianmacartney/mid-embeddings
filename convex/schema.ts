@@ -59,7 +59,17 @@ export default defineSchema({
     leftEmbedding: v.array(v.number()),
     rightEmbedding: v.array(v.number()),
     midpointEmbedding: v.array(v.number()),
-    topMatches: v.array(v.object({ title: v.string(), score: v.number() })),
+    topMatches: v.array(
+      v.object({
+        title: v.string(),
+        score: v.number(),
+        // leftRank: v.number(),
+        // rightRank: v.number(),
+        leftScore: v.number(),
+        rightScore: v.number(),
+        lxrScore: v.number(),
+      }),
+    ),
   }).index("namespaceId", ["namespaceId", "left", "right"]),
 
   games: defineTable({

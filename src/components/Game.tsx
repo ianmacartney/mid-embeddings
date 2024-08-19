@@ -121,8 +121,8 @@ function Guesses({
       {guesses &&
         guesses.map((guess) => (
           <div key={guess._id}>
-            {f(guess.leftDistance)} - {guess.text}: {guess.rank}(
-            {f(guess.score)}) - {f(guess.rightDistance)}
+            {f(guess.leftDistance)} ⬅️ {guess.text}: {guess.rank}(
+            {f(guess.score)}) ➡️ {f(guess.rightDistance)}
           </div>
         ))}
     </>
