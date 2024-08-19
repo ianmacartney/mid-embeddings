@@ -1,10 +1,15 @@
 import { Infer, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, query } from "./_generated/server";
-import { getOneFrom, getOrThrow } from "convex-helpers/server/relationships";
+import {
+  getManyFrom,
+  getOneFrom,
+  getOrThrow,
+} from "convex-helpers/server/relationships";
 import { pick, nullThrows } from "convex-helpers";
 import {
   error,
+  migration,
   ok,
   resultValidator,
   userAction,
@@ -14,6 +19,7 @@ import {
 import schema from "./schema";
 import { embed } from "./llm";
 import { computeGuess, lookupMidpoint } from "./namespace";
+import { asyncMap } from "convex-helpers";
 
 const gameValidator = v.object({
   gameId: vv.id("games"),
@@ -122,5 +128,23 @@ export const insertGuess = internalMutation({
     const results = await computeGuess(ctx, midpoint, embedding, "rank");
 
     return ctx.db.insert("guesses", { ...args, ...results });
+  },
+});
+
+export const cleanUpGames = migration({
+  table: "games",
+  async migrateOne(ctx, doc) {
+    const midpoint = await lookupMidpoint(ctx, {
+      namespaceId: doc.namespaceId,
+      left: doc.left,
+      right: doc.right,
+    });
+    if (!midpoint) {
+      await asyncMap(
+        getManyFrom(ctx.db, "guesses", "gameId", doc._id),
+        async (guess) => ctx.db.delete(guess._id),
+      );
+      return ctx.db.delete(doc._id);
+    }
   },
 });
