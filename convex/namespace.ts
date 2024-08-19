@@ -222,6 +222,14 @@ export const midpointSearch = namespaceAdminAction({
   },
 });
 
+export function findRank(scores: number[], score: number) {
+  const rank = scores.findIndex((m) => m <= score + 0.00001);
+  if (rank === -1) {
+    return Infinity;
+  }
+  return rank;
+}
+
 export async function lookupMidpoint(
   ctx: { db: DatabaseReader },
   args: { namespaceId: Id<"namespaces">; left: string; right: string },

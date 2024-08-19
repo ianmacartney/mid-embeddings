@@ -14,7 +14,7 @@ import {
 import schema from "./schema";
 import { embed } from "./llm";
 import { dotProduct } from "./linearAlgebra";
-import { lookupMidpoint } from "./namespace";
+import { findRank, lookupMidpoint } from "./namespace";
 
 const gameValidator = v.object({
   gameId: vv.id("games"),
@@ -103,8 +103,6 @@ export const makeGuess = userAction({
   },
 });
 
-const EPSILON = 0.00001;
-
 export const insertGuess = internalMutation({
   args: {
     gameId: v.id("games"),
@@ -124,8 +122,9 @@ export const insertGuess = internalMutation({
     const score = dotProduct(midpoint.midpointEmbedding, embedding);
     const leftDistance = dotProduct(midpoint.leftEmbedding, embedding);
     const rightDistance = dotProduct(midpoint.rightEmbedding, embedding);
-    const rank = midpoint.topMatches.findIndex(
-      (m) => m.score <= score + EPSILON,
+    const rank = findRank(
+      midpoint.topMatches.map((m) => m.score),
+      score,
     );
 
     // TODO: score might be based on how it compares against topMatches instead of raw score
