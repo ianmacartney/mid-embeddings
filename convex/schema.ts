@@ -54,17 +54,16 @@ export default defineSchema({
 
   midpoints: defineTable({
     namespaceId: v.id("namespaces"),
+    strategy: v.optional(v.union(v.literal("rank"), v.literal("midpoint"))),
     left: v.string(), // titles
     right: v.string(),
     leftEmbedding: v.array(v.number()),
     rightEmbedding: v.array(v.number()),
-    midpointEmbedding: v.array(v.number()),
+    midpointEmbedding: v.optional(v.array(v.number())),
     topMatches: v.array(
       v.object({
         title: v.string(),
         score: v.number(),
-        // leftRank: v.number(),
-        // rightRank: v.number(),
         leftScore: v.number(),
         rightScore: v.number(),
         lxrScore: v.number(),
@@ -86,8 +85,8 @@ export default defineSchema({
     userId: v.id("users"),
     rank: v.number(),
     score: v.number(),
-    leftDistance: v.number(),
-    rightDistance: v.number(),
+    leftScore: v.number(),
+    rightScore: v.number(),
     text: v.string(),
   })
     // look up all the guesses in a game, top scores in each game.

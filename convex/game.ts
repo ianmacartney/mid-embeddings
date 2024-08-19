@@ -14,7 +14,9 @@ import {
 import schema from "./schema";
 import { embed } from "./llm";
 import { dotProduct } from "./linearAlgebra";
-import { findRank, lookupMidpoint } from "./namespace";
+import { computeGuess, findRank, lookupMidpoint } from "./namespace";
+import { asyncMap } from "convex-helpers";
+import { getTextByTitle } from "./embed";
 
 const gameValidator = v.object({
   gameId: vv.id("games"),
@@ -119,21 +121,9 @@ export const insertGuess = internalMutation({
         right: game.right,
       }),
     );
-    const score = dotProduct(midpoint.midpointEmbedding, embedding);
-    const leftDistance = dotProduct(midpoint.leftEmbedding, embedding);
-    const rightDistance = dotProduct(midpoint.rightEmbedding, embedding);
-    const rank = findRank(
-      midpoint.topMatches.map((m) => m.score),
-      score,
-    );
+    const results = await computeGuess(ctx, midpoint, embedding);
 
     // TODO: score might be based on how it compares against topMatches instead of raw score
-    return ctx.db.insert("guesses", {
-      ...args,
-      rank: rank === -1 ? Infinity : rank,
-      score,
-      leftDistance,
-      rightDistance,
-    });
+    return ctx.db.insert("guesses", { ...args, ...results });
   },
 });
