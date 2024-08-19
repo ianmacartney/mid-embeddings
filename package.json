@@ -26,7 +26,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "convex": "^1.14.1",
-    "convex-helpers": "^0.1.51-alpha.1",
+    "convex-helpers": "^0.1.51-alpha.4",
     "dayjs": "^1.11.11",
     "next-themes": "^0.3.0",
     "react": "^18.3.1",
