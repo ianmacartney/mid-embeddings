@@ -102,47 +102,6 @@ const schema = defineSchema({
     // look up all the games I've been in, guesses in a game, top score in each.
     .index("userId", ["userId", "gameId", "rank"]),
 
-  /*
-
-    */
-  feels: defineTable({
-    feel: v.string(),
-    together: v.optional(v.array(v.number())),
-    openAISmall1536: v.optional(v.array(v.number())),
-    openAISmall256: v.optional(v.array(v.number())),
-  })
-    .vectorIndex("together", {
-      dimensions: 768,
-      vectorField: "together",
-    })
-    .vectorIndex("openAISmall1536", {
-      dimensions: 1536,
-      vectorField: "openAISmall1536",
-    })
-    .vectorIndex("openAISmall256", {
-      dimensions: 256,
-      vectorField: "openAISmall256",
-    })
-    .index("feel", ["feel"]),
-  words: defineTable({
-    word: v.string(),
-    together: v.optional(v.array(v.number())),
-    openAISmall1536: v.optional(v.array(v.number())),
-    openAISmall256: v.optional(v.array(v.number())),
-  })
-    .vectorIndex("together", {
-      dimensions: 768,
-      vectorField: "together",
-    })
-    .vectorIndex("openAISmall1536", {
-      dimensions: 1536,
-      vectorField: "openAISmall1536",
-    })
-    .vectorIndex("openAISmall256", {
-      dimensions: 256,
-      vectorField: "openAISmall256",
-    })
-    .index("word", ["word"]),
   ...rateLimitTables,
   migrations: migrationsTable,
 });
