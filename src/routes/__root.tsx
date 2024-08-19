@@ -37,13 +37,12 @@ function Content() {
               <h1 className="text-base font-semibold">Mid</h1>
             </a>
             <div className="flex items-center gap-4 text-sm">
-              <a
-                href="https://docs.convex.dev"
-                className="text-muted-foreground transition-colors hover:text-foreground"
-                target="_blank"
+              <Link
+                to="/author"
+                className="text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground"
               >
-                Docs
-              </a>
+                Author
+              </Link>
             </div>
           </div>
           <Unauthenticated>
