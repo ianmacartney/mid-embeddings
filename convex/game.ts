@@ -118,9 +118,9 @@ export const insertGuess = internalMutation({
         right: game.right,
       }),
     );
-    const results = await computeGuess(ctx, midpoint, embedding);
+    // TODO: hardcode "rank" for now
+    const results = await computeGuess(ctx, midpoint, embedding, "rank");
 
-    // TODO: score might be based on how it compares against topMatches instead of raw score
     return ctx.db.insert("guesses", { ...args, ...results });
   },
 });

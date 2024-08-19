@@ -3,6 +3,7 @@ import { Infer, v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 import { rateLimitTables } from "convex-helpers/server/rateLimit";
 import { migrationsTable } from "convex-helpers/server/migrations";
+import { deprecated, pretendRequired } from "convex-helpers/validators";
 
 // The schema is normally optional, but Convex Auth
 // requires indexes defined on `authTables`.
@@ -54,14 +55,11 @@ const schema = defineSchema({
 
   midpoints: defineTable({
     namespaceId: v.id("namespaces"),
-    strategy: v.optional(
-      v.union(v.literal("rank"), v.literal("midpoint"), v.literal("lxr")),
-    ),
     left: v.string(), // titles
     right: v.string(),
     leftEmbedding: v.array(v.number()),
     rightEmbedding: v.array(v.number()),
-    midpointEmbedding: v.optional(v.array(v.number())),
+    midpointEmbedding: v.array(v.number()),
     topMatches: v.array(
       v.object({
         title: v.string(),
@@ -69,9 +67,12 @@ const schema = defineSchema({
         leftScore: v.number(),
         rightScore: v.number(),
         // ranks
-        // leftRank: v.number(),
-        // rightRank: v.number(),
-        // rrfScore: v.number(),
+        leftRank: v.number(),
+        rightRank: v.number(),
+        rrfScore: v.number(),
+        leftOverallRank: v.number(),
+        rightOverallRank: v.number(),
+        rrfOverallScore: v.number(),
         // or alongside topMatches?
         lxrScore: v.number(),
       }),
@@ -145,11 +146,5 @@ const schema = defineSchema({
   ...rateLimitTables,
   migrations: migrationsTable,
 });
-
-export type Strategy = Infer<
-  typeof schema.tables.midpoints.validator.fields.strategy
->;
-export const Strategies =
-  schema.tables.midpoints.validator.fields.strategy.members.map((m) => m.value);
 
 export default schema;

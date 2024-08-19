@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { Infer, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import {
@@ -26,7 +26,6 @@ import { calculateMidpoint, dotProduct } from "./linearAlgebra";
 import { partial } from "convex-helpers/validators";
 import { FunctionArgs, paginationOptsValidator } from "convex/server";
 import { omit } from "convex-helpers";
-import { pick } from "convex-helpers";
 import { nullThrows } from "convex-helpers";
 import { getTextByTitle } from "./embed";
 
@@ -196,7 +195,6 @@ export const midpointSearch = namespaceAdminAction({
     left: v.string(),
     right: v.string(),
     skipCache: v.optional(v.boolean()),
-    strategy: schema.tables.midpoints.validator.fields.strategy,
   },
   handler: async (ctx, args): Promise<Doc<"midpoints">> => {
     const midpoint = await ctx.runQuery(internal.namespace.getMidpoint, {
@@ -208,103 +206,93 @@ export const midpointSearch = namespaceAdminAction({
       console.debug("Found midpoint in cache");
       return midpoint;
     }
-    if (args.strategy === "rank") {
-      const [[leftEmbedding, leftResults], [rightEmbedding, rightResults]] =
-        await Promise.all(
-          [
-            [midpoint?.leftEmbedding, args.left] as const,
-            [midpoint?.rightEmbedding, args.right] as const,
-          ].map(async ([existingEmbedding, text]) => {
-            const embedding = existingEmbedding || (await embed(text));
-            const results = await ctx.vectorSearch("embeddings", "embedding", {
-              vector: embedding,
-              limit: 100,
-              filter: (q) => q.eq("namespaceId", ctx.namespace._id),
-            });
-            return [embedding, results] as const;
-          }),
-        );
-
-      const leftOverallRankById = new Map(
-        leftResults.map(({ _id }, i) => [_id, i]),
+    const [[leftEmbedding, leftResults], [rightEmbedding, rightResults]] =
+      await Promise.all(
+        [
+          [midpoint?.leftEmbedding, args.left] as const,
+          [midpoint?.rightEmbedding, args.right] as const,
+        ].map(async ([existingEmbedding, text]) => {
+          const embedding = existingEmbedding || (await embed(text));
+          const results = await ctx.vectorSearch("embeddings", "embedding", {
+            vector: embedding,
+            limit: 100,
+            filter: (q) => q.eq("namespaceId", ctx.namespace._id),
+          });
+          return [embedding, results] as const;
+        }),
       );
-      const rightOverallRankById = new Map(
-        rightResults.map(({ _id }, i) => [_id, i]),
-      );
-      const rightRankById = new Map(
-        rightResults
-          .filter(({ _id }) => leftOverallRankById.has(_id))
-          .map(({ _id, _score }, i) => [_id, { _score, i }]),
-      );
+    const midpointEmbedding = calculateMidpoint(leftEmbedding, rightEmbedding);
 
-      const topMatches = leftResults
-        .filter(({ _id }) => rightRankById.has(_id))
-        .map(({ _id, _score: leftScore }, leftRank) => {
-          const { _score: rightScore, i: rightRank } = rightRankById.get(_id)!;
-          const leftOverallRank = leftOverallRankById.get(_id)!;
-          const rightOverallRank = rightOverallRankById.get(_id)!;
-          return {
-            embeddingId: _id,
-            leftScore: leftOverallRank,
-            rightScore: rightOverallRank,
-            score: reciprocalRankFusion(leftOverallRank, rightOverallRank),
-            lxrScore: reciprocalRankFusion(leftRank, rightRank),
-          } as FunctionArgs<
-            typeof internal.namespace.upsertMidpoint
-          >["topMatches"][0];
-        })
-        .sort((a, b) => b.score - a.score);
-      return ctx.runMutation(internal.namespace.upsertMidpoint, {
-        left: args.left,
-        right: args.right,
-        namespaceId: ctx.namespace._id,
-        leftEmbedding,
-        rightEmbedding,
-        topMatches,
-        strategy: "rank",
-      }) as Promise<Doc<"midpoints">>;
-    } else {
-      const leftEmbedding = midpoint?.leftEmbedding || (await embed(args.left));
-      const rightEmbedding =
-        midpoint?.rightEmbedding || (await embed(args.right));
-
-      const midpointEmbedding = calculateMidpoint(
-        leftEmbedding,
-        rightEmbedding,
-      );
-
-      // const overlap: Map<Id<"embeddings">, {left: number; right: number}> = new Map();
-
-      const topMatches = await ctx
+    const midpointMatchScoresById = new Map(
+      await ctx
         .vectorSearch("embeddings", "embedding", {
           vector: midpointEmbedding,
           limit: 102, // extra two to account for the left and right embeddings
           filter: (q) => q.eq("namespaceId", ctx.namespace._id),
         })
-        .then((results) =>
-          results.map(
-            ({ _id, _score }) =>
-              ({
-                embeddingId: _id,
-                score: _score,
-                // leftRank: 0,
-                // rightRank: 0,
-              }) satisfies FunctionArgs<
-                typeof internal.namespace.upsertMidpoint
-              >["topMatches"][0],
+        .then((results) => results.map((r) => [r._id, r._score])),
+    );
+
+    const leftOverallRankById = new Map(
+      leftResults.map(({ _id }, i) => [_id, i]),
+    );
+    const rightOverallRankById = new Map(
+      rightResults.map(({ _id }, i) => [_id, i]),
+    );
+    const rightRankById = new Map(
+      rightResults
+        .filter(({ _id }) => leftOverallRankById.has(_id))
+        .map(({ _id, _score }, i) => [_id, { _score, i }]),
+    );
+
+    const topMatches = leftResults
+      .filter(({ _id }) => rightRankById.has(_id))
+      .map(({ _id, _score: leftScore }, leftRank) => {
+        const { _score: rightScore, i: rightRank } = rightRankById.get(_id)!;
+        const leftOverallRank = leftOverallRankById.get(_id)!;
+        const rightOverallRank = rightOverallRankById.get(_id)!;
+        return {
+          embeddingId: _id,
+          leftRank,
+          rightRank,
+          rrfScore: reciprocalRankFusion(leftRank, rightRank),
+          leftOverallRank,
+          rightOverallRank,
+          rrfOverallScore: reciprocalRankFusion(
+            leftOverallRank,
+            rightOverallRank,
           ),
-        );
-      return ctx.runMutation(internal.namespace.upsertMidpoint, {
-        left: args.left,
-        right: args.right,
-        namespaceId: ctx.namespace._id,
-        leftEmbedding,
-        rightEmbedding,
-        midpointEmbedding,
-        topMatches,
-        strategy: "midpoint",
-      }) as Promise<Doc<"midpoints">>;
+          score: midpointMatchScoresById.get(_id) ?? -Infinity,
+        } as FunctionArgs<
+          typeof internal.namespace.upsertMidpoint
+        >["topMatches"][0];
+      })
+      .sort((a, b) => b.rrfScore - a.rrfScore);
+
+    for (const [id, score] of midpointMatchScoresById.entries()) {
+      if (!rightRankById.has(id)) {
+        topMatches.push({
+          embeddingId: id,
+          leftRank: -Infinity,
+          rightRank: -Infinity,
+          leftOverallRank: leftOverallRankById.get(id) ?? -Infinity,
+          rightOverallRank: rightOverallRankById.get(id) ?? -Infinity,
+          rrfOverallScore: -Infinity,
+          rrfScore: -Infinity,
+          score,
+        });
+      }
     }
+
+    return ctx.runMutation(internal.namespace.upsertMidpoint, {
+      left: args.left,
+      right: args.right,
+      namespaceId: ctx.namespace._id,
+      leftEmbedding,
+      rightEmbedding,
+      topMatches,
+      midpointEmbedding,
+    }) as Promise<Doc<"midpoints">>;
   },
 });
 
@@ -324,8 +312,12 @@ export const upsertMidpoint = internalMutation({
     topMatches: v.array(
       v.object({
         embeddingId: v.id("embeddings"),
-        ...partial(omit(midpointFields.topMatches.element.fields, ["title"])),
-        ...pick(midpointFields.topMatches.element.fields, ["score"]),
+        ...omit(midpointFields.topMatches.element.fields, [
+          "title",
+          "leftScore",
+          "rightScore",
+          "lxrScore",
+        ]),
       }),
     ),
   },
@@ -339,19 +331,6 @@ export const upsertMidpoint = internalMutation({
           "embeddingId",
           embeddingId,
         );
-        if (!args.midpointEmbedding) {
-          const { leftScore, rightScore, lxrScore, score } = rest;
-          if (
-            leftScore === undefined ||
-            rightScore === undefined ||
-            lxrScore === undefined
-          ) {
-            throw new Error(
-              "Missing scores: " + text.title + JSON.stringify(rest),
-            );
-          }
-          return { title: text.title, score, leftScore, rightScore, lxrScore };
-        }
         const embedding = await getOrThrow(ctx, embeddingId);
         const leftScore = dotProduct(args.leftEmbedding, embedding.embedding);
         const rightScore = dotProduct(args.rightEmbedding, embedding.embedding);
@@ -435,8 +414,17 @@ export const getMidpoint = internalQuery({
   handler: lookupMidpoint,
 });
 
+const strategy = v.union(
+  v.literal("rank"),
+  v.literal("rankOverall"),
+  v.literal("midpoint"),
+  v.literal("lxr"),
+);
+export type Strategy = Infer<typeof strategy>;
+export const Strategies = strategy.members.map((m) => m.value);
+
 export const makeGuess = namespaceAdminAction({
-  args: { guess: v.string(), left: v.string(), right: v.string() },
+  args: { guess: v.string(), left: v.string(), right: v.string(), strategy },
   handler: async (ctx, args) => {
     const embedding = await embed(args.guess);
     const results: {
@@ -460,10 +448,11 @@ export const calculateGuess = internalQuery({
     left: v.string(),
     right: v.string(),
     embedding: v.array(v.number()),
+    strategy,
   },
   handler: async (ctx, { embedding, ...args }) => {
     const midpoint = nullThrows(await lookupMidpoint(ctx, args));
-    return computeGuess(ctx, midpoint, embedding);
+    return computeGuess(ctx, midpoint, embedding, args.strategy);
   },
 });
 
@@ -471,14 +460,22 @@ export async function computeGuess(
   ctx: { db: DatabaseReader },
   midpoint: Doc<"midpoints">,
   embedding: number[],
+  strategy: Strategy,
 ) {
-  if (midpoint.strategy !== "rank") {
+  if (strategy === "midpoint" || strategy === "lxr") {
     const score = dotProduct(midpoint.midpointEmbedding!, embedding);
     const leftScore = dotProduct(midpoint.leftEmbedding, embedding);
     const rightScore = dotProduct(midpoint.rightEmbedding, embedding);
     const lxrScore = leftScore * rightScore;
+    const sortedMatches = midpoint.topMatches
+      .slice()
+      .sort(
+        strategy === "lxr"
+          ? (a, b) => b.lxrScore - a.lxrScore
+          : (a, b) => b.score - a.score,
+      );
     const rank = findRank(
-      midpoint.topMatches.map((m) => m.score),
+      sortedMatches.map((m) => m.score),
       score,
     );
     return {
@@ -491,7 +488,14 @@ export async function computeGuess(
   } else {
     const leftScore = dotProduct(midpoint.leftEmbedding, embedding);
     const rightScore = dotProduct(midpoint.rightEmbedding, embedding);
-    const scores = await asyncMap(midpoint.topMatches, async (match, i) => {
+    const sortedMatches = midpoint.topMatches
+      .slice()
+      .sort(
+        strategy === "rankOverall"
+          ? (a, b) => b.rrfOverallScore - a.rrfOverallScore
+          : (a, b) => b.rrfScore - a.rrfScore,
+      );
+    const scores = await asyncMap(sortedMatches, async (match, i) => {
       const text = await getTextByTitle(ctx, midpoint.namespaceId, match.title);
       const rankedEmbedding = await getOrThrow(ctx, text!.embeddingId);
       const score = dotProduct(rankedEmbedding.embedding, embedding);
