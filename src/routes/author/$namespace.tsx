@@ -13,8 +13,17 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { FunctionReturnType } from "convex/server";
-import { CheckboxIcon, Cross1Icon, TrashIcon } from "@radix-ui/react-icons";
+import { Cross1Icon, TrashIcon } from "@radix-ui/react-icons";
 import { chunk } from "@/lib/utils";
+import schema, { Strategy } from "@convex/schema";
+import { Infer } from "convex/values";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/author/$namespace")({
   component: Namespace,
@@ -49,7 +58,7 @@ function Namespace() {
     FunctionReturnType<typeof fn.makeGuess>[]
   >([]);
 
-  const [useLXR, setUseLXR] = useState(false);
+  const [strategy, setStrategy] = useState<Strategy>("rank");
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen h-full overflow-scroll bg-background text-foreground">
@@ -89,19 +98,23 @@ function Namespace() {
                 }).then(() => toast({ title: "Description updated" }))
               }
             />
-            <div className="flex items-center gap-2">
-              <label htmlFor="lxr" className="flex items-center gap-2">
-                Use left X right to sort?
-              </label>
-              <input
-                id="lxr"
-                type="checkbox"
-                checked={useLXR}
-                onClick={() => {
-                  setUseLXR((lxr) => !lxr);
-                }}
-              />
-            </div>
+            {/* <div className="flex items-center gap-2"> */}
+            <Select
+              value={strategy}
+              onValueChange={(v) => setStrategy(v as any)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Stragegy" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rank">Reciprocal Rank Fusion</SelectItem>
+                <SelectItem value="midpoint">Midpoint</SelectItem>
+                <SelectItem value="lxr">
+                  Left Distance * Right Distance
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {/* </div> */}
           </div>
         </div>
         {!isEmpty && (
@@ -151,7 +164,9 @@ function Namespace() {
                 />
                 {[...guessResults]
                   .sort((a, b) =>
-                    useLXR ? b.lxrScore - a.lxrScore : b.score - a.score,
+                    strategy === "lxr"
+                      ? b.lxrScore - a.lxrScore
+                      : b.score - a.score,
                   )
                   .slice(0, 10)
                   .map((guess, i) => (
@@ -183,7 +198,7 @@ function Namespace() {
                 namespace={namespace}
                 left={words.left}
                 right={words.right}
-                useLXR={useLXR}
+                strategy={strategy}
               />
               <BasicSearch namespace={namespace} text={words.right} />
             </div>
@@ -426,19 +441,19 @@ function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
 }
 
 function f(num: number) {
-  return num.toPrecision(3);
+  return num.toPrecision(2);
 }
 
 function Midpoint({
   namespace,
   left,
   right,
-  useLXR,
+  strategy,
 }: {
   namespace: string;
   right: string;
   left: string;
-  useLXR: boolean;
+  strategy: Strategy;
 }) {
   const search = useAction(fn.midpointSearch);
   const makeGame = useMutation(fn.makeGame);
@@ -447,12 +462,12 @@ function Midpoint({
   const sorted = useMemo(() => {
     if (!midpoint) return [];
     return [...midpoint.topMatches].sort((a, b) =>
-      useLXR ? b.lxrScore - a.lxrScore : b.score - a.score,
+      strategy === "lxr" ? b.lxrScore - a.lxrScore : b.score - a.score,
     );
-  }, [midpoint, useLXR]);
+  }, [midpoint, strategy]);
   useEffect(() => {
     if (!left || !right) return;
-    search({ namespace, left, right }).then((results) => {
+    search({ namespace, left, right, strategy }).then((results) => {
       setMidpoint(results);
     });
   }, [namespace, left, right]);
@@ -467,14 +482,15 @@ function Midpoint({
             key={result.title + i}
             className="px-3 py-1 text-sm font-medium rounded-md bg-muted text-muted-foreground"
           >
-            {f(result.leftScore)} ⬅️ {result.title}:{f(result.score)} ➡️{" "}
+            {f(result.leftScore)} ⬅️ {result.title}:
+            {f(strategy === "lxr" ? result.lxrScore : result.score)} ➡️{" "}
             {f(result.rightScore)}
           </div>
         ))}
       </div>
       <Button
         onClick={() => {
-          search({ namespace, left, right, skipCache: true }).then(
+          search({ namespace, left, right, skipCache: true, strategy }).then(
             (results) => {
               setMidpoint(results);
             },

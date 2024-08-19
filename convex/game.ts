@@ -13,10 +13,7 @@ import {
 } from "./functions";
 import schema from "./schema";
 import { embed } from "./llm";
-import { dotProduct } from "./linearAlgebra";
-import { computeGuess, findRank, lookupMidpoint } from "./namespace";
-import { asyncMap } from "convex-helpers";
-import { getTextByTitle } from "./embed";
+import { computeGuess, lookupMidpoint } from "./namespace";
 
 const gameValidator = v.object({
   gameId: vv.id("games"),

@@ -196,7 +196,7 @@ export const midpointSearch = namespaceAdminAction({
     left: v.string(),
     right: v.string(),
     skipCache: v.optional(v.boolean()),
-    useRank: v.optional(v.boolean()),
+    strategy: schema.tables.midpoints.validator.fields.strategy,
   },
   handler: async (ctx, args): Promise<Doc<"midpoints">> => {
     const midpoint = await ctx.runQuery(internal.namespace.getMidpoint, {
@@ -205,9 +205,10 @@ export const midpointSearch = namespaceAdminAction({
       right: args.right,
     });
     if (!args.skipCache && midpoint) {
+      console.debug("Found midpoint in cache");
       return midpoint;
     }
-    if (args.useRank) {
+    if (args.strategy === "rank") {
       const [[leftEmbedding, leftResults], [rightEmbedding, rightResults]] =
         await Promise.all(
           [
@@ -315,30 +316,6 @@ export function findRank(scores: number[], score: number) {
   return rank;
 }
 
-export async function lookupMidpoint(
-  ctx: { db: DatabaseReader },
-  args: { namespaceId: Id<"namespaces">; left: string; right: string },
-) {
-  return ctx.db
-    .query("midpoints")
-    .withIndex("namespaceId", (q) =>
-      q
-        .eq("namespaceId", args.namespaceId)
-        .eq("left", args.left)
-        .eq("right", args.right),
-    )
-    .unique();
-}
-
-export const getMidpoint = internalQuery({
-  args: {
-    namespaceId: v.id("namespaces"),
-    left: v.string(),
-    right: v.string(),
-  },
-  handler: lookupMidpoint,
-});
-
 const midpointFields = schema.tables.midpoints.validator.fields;
 
 export const upsertMidpoint = internalMutation({
@@ -364,8 +341,14 @@ export const upsertMidpoint = internalMutation({
         );
         if (!args.midpointEmbedding) {
           const { leftScore, rightScore, lxrScore, score } = rest;
-          if (!leftScore || !rightScore || !lxrScore) {
-            throw new Error("Missing scores");
+          if (
+            leftScore === undefined ||
+            rightScore === undefined ||
+            lxrScore === undefined
+          ) {
+            throw new Error(
+              "Missing scores: " + text.title + JSON.stringify(rest),
+            );
           }
           return { title: text.title, score, leftScore, rightScore, lxrScore };
         }
@@ -426,6 +409,30 @@ export const deleteMidpoint = namespaceAdminMutation({
       await ctx.db.delete(args.midpointId);
     }
   },
+});
+
+export async function lookupMidpoint(
+  ctx: { db: DatabaseReader },
+  args: { namespaceId: Id<"namespaces">; left: string; right: string },
+) {
+  return ctx.db
+    .query("midpoints")
+    .withIndex("namespaceId", (q) =>
+      q
+        .eq("namespaceId", args.namespaceId)
+        .eq("left", args.left)
+        .eq("right", args.right),
+    )
+    .unique();
+}
+
+export const getMidpoint = internalQuery({
+  args: {
+    namespaceId: v.id("namespaces"),
+    left: v.string(),
+    right: v.string(),
+  },
+  handler: lookupMidpoint,
 });
 
 export const makeGuess = namespaceAdminAction({
