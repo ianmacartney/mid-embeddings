@@ -17,6 +17,8 @@ import {
   namespaceAdminAction,
   namespaceAdminMutation,
   namespaceAdminQuery,
+  namespaceUserAction,
+  namespaceUserQuery,
   userMutation,
   userQuery,
 } from "./functions";
@@ -76,7 +78,7 @@ export const update = namespaceAdminMutation({
   },
 });
 
-export const getNamespace = namespaceAdminQuery({
+export const getNamespace = namespaceUserQuery({
   args: {},
   handler: async (ctx, args) => {
     const isEmpty = !(await ctx.db
@@ -129,7 +131,7 @@ export const addText = namespaceAdminAction({
   },
 });
 
-export const paginateText = namespaceAdminQuery({
+export const paginateText = namespaceUserQuery({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     return ctx.db
@@ -150,7 +152,7 @@ export const listMidpoints = namespaceAdminQuery({
   },
 });
 
-export const basicVectorSearch = namespaceAdminAction({
+export const basicVectorSearch = namespaceUserAction({
   args: { text: v.string() },
   returns: v.array(v.object({ title: v.string(), score: v.number() })),
   handler: async (ctx, args) => {
@@ -190,7 +192,7 @@ function reciprocalRankFusion(aIndex: number, bIndex: number, k?: number) {
   return (a + b) / (a * b);
 }
 
-export const midpointSearch = namespaceAdminAction({
+export const midpointSearch = namespaceUserAction({
   args: {
     left: v.string(),
     right: v.string(),
@@ -423,7 +425,7 @@ const strategy = v.union(
 export type Strategy = Infer<typeof strategy>;
 export const Strategies = strategy.members.map((m) => m.value);
 
-export const makeGuess = namespaceAdminAction({
+export const makeGuess = namespaceUserAction({
   args: { guess: v.string(), left: v.string(), right: v.string(), strategy },
   handler: async (ctx, args) => {
     const embedding = await embed(args.guess);
