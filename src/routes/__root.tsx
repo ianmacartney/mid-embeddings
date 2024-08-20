@@ -1,7 +1,12 @@
 import { Toaster } from "@/components/ui/toaster";
 import { UserMenu } from "@/components/UserMenu";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  Link,
+  Outlet,
+  useRouter,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import {
   Authenticated,
@@ -20,8 +25,12 @@ export const Route = createRootRoute({
 });
 
 function App() {
+  const router = useRouter();
   return (
-    <ConvexAuthProvider client={convex}>
+    <ConvexAuthProvider
+      client={convex}
+      replaceURL={(to) => router.navigate({ to, replace: true })}
+    >
       <Content />
     </ConvexAuthProvider>
   );
@@ -34,14 +43,14 @@ function Content() {
         <nav className="container w-full justify-between flex flex-row items-center gap-6">
           <div className="flex items-center gap-6 md:gap-10">
             <a href="/">
-              <h1 className="text-base font-semibold">Mid</h1>
+              <h1 className="text-base font-semibold">Mid Embeddings</h1>
             </a>
             <div className="flex items-center gap-4 text-sm">
               <Link
                 to="/author"
                 className="text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground"
               >
-                Author
+                Author your own
               </Link>
             </div>
           </div>
