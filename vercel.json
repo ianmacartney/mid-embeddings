@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/mid-embeddings(.*)",
+      "destination": "/mid-embeddings"
+    }
+  ]
+}
