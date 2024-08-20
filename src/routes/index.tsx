@@ -22,6 +22,8 @@ import { Strategy } from "@convex/namespace";
 import { Doc } from "@convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { FunctionReturnType } from "convex/server";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -207,17 +209,60 @@ function Midpoint({
           );
         })}
       </div>
-      <div className="text-lg">{strategyName(strategy)}</div>
+      <div className="">{strategyName(strategy)}</div>
     </div>
   );
 }
 
 function SearchFeelings() {
+  const [text, setText] = useState("");
   return (
     <div className="flex items-center gap-4">
       <div className="flex flex-col items-center gap-4">
         <h2 className="text-2xl mb-4">Feelings Finder</h2>
-        <div className="flex gap-4"></div>
+        <Input
+          type="text"
+          placeholder="Hit Enter to search"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              setText(e.currentTarget.value);
+              e.currentTarget.value = "";
+            }
+          }}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        <BasicSearch namespace="feelings" text={text} />
+      </div>
+    </div>
+  );
+}
+
+function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
+  const basicSearch = useAction(api.namespace.basicVectorSearch);
+  const [basicResults, setBasicResults] = useState<
+    FunctionReturnType<typeof api.namespace.basicVectorSearch>
+  >([]);
+  useEffect(() => {
+    if (!text) return;
+    basicSearch({ namespace, text }).then((results) => {
+      setBasicResults(results);
+    });
+  }, [namespace, text]);
+  return (
+    <div className="flex flex-col items-center w-full gap-2">
+      <div className="text-lg"> {text}</div>
+      <div className="flex flex-col justify-center gap-2">
+        {!!text.length &&
+          basicResults.map((result, i) => (
+            <div
+              key={result.title + i}
+              className="px-3 py-1 text-lg font-medium "
+              title={`Score: ${result.score.toFixed(2)}`}
+            >
+              {i + 1}: {result.title}
+            </div>
+          ))}
       </div>
     </div>
   );
@@ -226,7 +271,7 @@ function SearchFeelings() {
 function DailyGame() {
   // TODO: get namespace from env variable, default to first namespace.
   const gameResult = useQuery(api.game.getDailyGame, {
-    namespace: "mixed-feels",
+    namespace: "feelings",
   });
   if (gameResult && !gameResult.ok) {
     return <div>Error: {gameResult.error}</div>;
