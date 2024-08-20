@@ -70,7 +70,7 @@ export const userAction = customAction(
 async function getUserAndNamespace(ctx: QueryCtx, args: { namespace: string }) {
   const user = await getUser(ctx);
   if (!user) {
-    throw new Error("Not authenticated: " + auth.getSessionId(ctx));
+    throw new Error("Not authenticated: " + (await auth.getSessionId(ctx)));
   }
   const namespace = await getOneFrom(
     ctx.db,
