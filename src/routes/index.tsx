@@ -60,6 +60,16 @@ function CompareEmojis() {
     .slice()
     .sort((a, b) => b.title.localeCompare(a.title));
 
+  const search = useAction(api.namespace.midpointSearch);
+  const [midpoint, setMidpoint] = useState<Doc<"midpoints">>();
+  useEffect(() => {
+    const { left, right } = words;
+    if (!left || !right) return;
+    search({ namespace, left, right }).then((results) => {
+      setMidpoint(results);
+    });
+  }, [namespace, words.left, words.right]);
+
   return (
     <div className="flex items-center gap-4">
       <div className="flex flex-col items-center gap-4">
@@ -99,25 +109,25 @@ function CompareEmojis() {
         </div>
         <div className="flex gap-4">
           <Midpoint
-            namespace={namespace}
+            midpoint={midpoint}
             left={words.left}
             right={words.right}
             strategy={"rankOverall"}
           />
           <Midpoint
-            namespace={namespace}
+            midpoint={midpoint}
             left={words.left}
             right={words.right}
             strategy={"rank"}
           />
           <Midpoint
-            namespace={namespace}
+            midpoint={midpoint}
             left={words.left}
             right={words.right}
             strategy={"midpoint"}
           />
           <Midpoint
-            namespace={namespace}
+            midpoint={midpoint}
             left={words.left}
             right={words.right}
             strategy={"lxr"}
@@ -129,18 +139,16 @@ function CompareEmojis() {
 }
 
 function Midpoint({
-  namespace,
+  midpoint,
   left,
   right,
   strategy,
 }: {
-  namespace: string;
+  midpoint: Doc<"midpoints"> | undefined;
   right: string;
   left: string;
   strategy: Strategy;
 }) {
-  const search = useAction(api.namespace.midpointSearch);
-  const [midpoint, setMidpoint] = useState<Doc<"midpoints">>();
   const getScore = (match: Doc<"midpoints">["topMatches"][0]): number => {
     switch (strategy) {
       case "lxr":
@@ -163,7 +171,7 @@ function Midpoint({
       case "rank":
         return "Reciprocal Rank Fusion, but using the rank within emojis showing up in both searches";
       case "rankOverall":
-        return "Comparing the rank order of the results for each search (Reciprocal Rank Fusion)";
+        return `Comparing the emoji's ranked order in a vector search for each of ${left} and ${right}: sum of 1/rank (called Reciprocal Rank Fusion)`;
     }
   }
 
@@ -186,12 +194,6 @@ function Midpoint({
       .filter((m) => ![left, right].includes(m.title))
       .sort((a, b) => getScore(b) - getScore(a));
   }, [midpoint, strategy]);
-  useEffect(() => {
-    if (!left || !right) return;
-    search({ namespace, left, right }).then((results) => {
-      setMidpoint(results);
-    });
-  }, [namespace, left, right]);
   if (!sorted.length) return null;
   return (
     <div className="flex flex-col items-center w-full gap-2">
