@@ -70,7 +70,7 @@ export const userAction = customAction(
 async function getUserAndNamespace(ctx: QueryCtx, args: { namespace: string }) {
   const user = await getUser(ctx);
   if (!user) {
-    throw new Error("Not authenticated");
+    throw new Error("Not authenticated: " + auth.getSessionId(ctx));
   }
   const namespace = await getOneFrom(
     ctx.db,
@@ -81,26 +81,74 @@ async function getUserAndNamespace(ctx: QueryCtx, args: { namespace: string }) {
   if (!namespace) {
     throw new Error("Namespace not found");
   }
-  if (namespace.createdBy !== user._id) {
-    throw new Error("User is not the creator of this namespace");
-  }
   return { user, namespace };
 }
 
+function assertIsNamespaceCreator(
+  user: Doc<"users">,
+  namespace: Doc<"namespaces">,
+) {
+  if (namespace.createdBy !== user._id) {
+    throw new Error("User is not the creator of this namespace");
+  }
+}
+
+function assertIsCreatorOrPublic(
+  user: Doc<"users">,
+  namespace: Doc<"namespaces">,
+) {
+  if (namespace.createdBy !== user._id && !namespace.public) {
+    throw new Error("User is not the creator of this namespace");
+  }
+}
+
+export const namespaceUserQuery = customQuery(query, {
+  args: { namespace: v.string() },
+  input: async (ctx0, args) => {
+    const ctx = await getUserAndNamespace(ctx0, args);
+    assertIsCreatorOrPublic(ctx.user, ctx.namespace);
+    return { args: {}, ctx };
+  },
+});
+
+export const namespaceUserMutation = customMutation(mutation, {
+  args: { namespace: v.string() },
+  input: async (ctx0, args) => {
+    const ctx = await getUserAndNamespace(ctx0, args);
+    assertIsCreatorOrPublic(ctx.user, ctx.namespace);
+    return { args: {}, ctx };
+  },
+});
+
+export const namespaceUserAction = customAction(action, {
+  args: { namespace: v.string() },
+  async input(ctx, args) {
+    // Need to cast here to avoid circular api types.
+    const { user, namespace } = (await ctx.runQuery(
+      internal.functions.fetchUserAndNamespace,
+      args,
+    )) as { user: Doc<"users">; namespace: Doc<"namespaces"> };
+    assertIsCreatorOrPublic(user, namespace);
+    return { args: {}, ctx: { user, namespace } };
+  },
+});
+
 export const namespaceAdminQuery = customQuery(query, {
   args: { namespace: v.string() },
-  input: async (ctx, args) => ({
-    args: {},
-    ctx: await getUserAndNamespace(ctx, args),
-  }),
+  input: async (ctx0, args) => {
+    const ctx = await getUserAndNamespace(ctx0, args);
+    assertIsNamespaceCreator(ctx.user, ctx.namespace);
+    return { args: {}, ctx };
+  },
 });
 
 export const namespaceAdminMutation = customMutation(mutation, {
   args: { namespace: v.string() },
-  input: async (ctx, args) => ({
-    args: {},
-    ctx: await getUserAndNamespace(ctx, args),
-  }),
+  input: async (ctx0, args) => {
+    const ctx = await getUserAndNamespace(ctx0, args);
+    assertIsNamespaceCreator(ctx.user, ctx.namespace);
+    return { args: {}, ctx };
+  },
 });
 
 export const fetchUserAndNamespace = internalQuery(getUserAndNamespace);
@@ -113,10 +161,8 @@ export const namespaceAdminAction = customAction(action, {
       internal.functions.fetchUserAndNamespace,
       args,
     )) as { user: Doc<"users">; namespace: Doc<"namespaces"> };
-    return {
-      args: {},
-      ctx: { user, namespace },
-    };
+    assertIsNamespaceCreator(user, namespace);
+    return { args: {}, ctx: { user, namespace } };
   },
 });
 
