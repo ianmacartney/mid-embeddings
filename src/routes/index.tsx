@@ -74,6 +74,12 @@ function CompareEmojis() {
     <div className="flex items-center gap-4">
       <div className="flex flex-col items-center gap-4">
         <h2 className="text-2xl mb-4">Compare Emojis</h2>
+        <div className="text-center">
+          Choose two emojis to compare.
+          <br />
+          They will be compared based on their similarity according to AI
+          embeddings.
+        </div>
         <div className="flex gap-4">
           <Select
             value={words.left}
@@ -222,9 +228,14 @@ function SearchFeelings() {
     <div className="flex items-center gap-4">
       <div className="flex flex-col items-center gap-4">
         <h2 className="text-2xl mb-4">Feelings Finder</h2>
+        <div className="text-center">
+          Put anything in the search box and hit enter
+          <br />
+          to find related feelings (again, according to AI embeddings).
+        </div>
         <Input
           type="text"
-          placeholder="Hit Enter to search"
+          placeholder="Search for feelings"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
