@@ -1,47 +1,6 @@
-import { CONFIG, embed, embedBatch } from "./llm";
-import { v, Validator } from "convex/values";
-import { api, internal } from "./_generated/api";
-import { Doc, Id } from "./_generated/dataModel";
-import {
-  action,
-  ActionCtx,
-  internalAction,
-  internalMutation,
-  internalQuery,
-  mutation,
-  query,
-  QueryCtx,
-} from "./_generated/server";
-import schema from "./schema";
-import {
-  getOrThrow,
-  getManyFrom,
-  getOneFrom,
-} from "convex-helpers/server/relationships";
-import {
-  migration,
-  namespaceAdminQuery,
-  userAction,
-  userMutation,
-} from "./functions";
-import { dotProduct, calculateMidpoint } from "./linearAlgebra";
-import { paginationOptsValidator } from "convex/server";
+import { internalMutation } from "./_generated/server";
+import { migration } from "./functions";
 import { asyncMap } from "convex-helpers";
-import { populateTextsFromCache } from "./embed";
-import feels from "../feels.json";
-import { chunk } from "./llm";
-
-export const deleteFeels = internalMutation({
-  handler: async (ctx) => {
-    await Promise.all(
-      chunk(feels as string[]).map((feels) =>
-        ctx.scheduler.runAfter(0, internal.scrap.deleteFeelsBatch, {
-          feels,
-        }),
-      ),
-    );
-  },
-});
 
 export const deleteFeelsBatch = internalMutation({
   handler: async (ctx, args: { feels: string[] }) => {
