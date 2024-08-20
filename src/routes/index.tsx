@@ -171,6 +171,18 @@ function Midpoint({
   function strategyName(strategy: Strategy) {
     switch (strategy) {
       case "lxr":
+        return "Cosine Product";
+      case "midpoint":
+        return "Cosine Midpoint";
+      case "rank":
+        return "Rank (Overlap)";
+      case "rankOverall":
+        return "Rank (Overall)";
+    }
+  }
+  function strategyDescription(strategy: Strategy) {
+    switch (strategy) {
+      case "lxr":
         return `Cosine similarity to ${left} multiplied by the cosine similarity to ${right}`;
       case "midpoint":
         return "Cosine similarity to the midpoint (centroid) of the two embeddings";
@@ -203,6 +215,7 @@ function Midpoint({
   if (!sorted.length) return null;
   return (
     <div className="flex flex-col items-center w-full gap-2">
+      <div className="text-lg text-center">{strategyName(strategy)}</div>
       <div className="flex flex-col justify-center">
         {sorted.slice(0, 10).map((result, i) => {
           const title = getHoverText(result);
@@ -217,7 +230,7 @@ function Midpoint({
           );
         })}
       </div>
-      <div className="">{strategyName(strategy)}</div>
+      <div className="">{strategyDescription(strategy)}</div>
     </div>
   );
 }
