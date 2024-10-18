@@ -1,9 +1,29 @@
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { DatabaseReader } from "./_generated/server";
+import { ActionCtx, DatabaseReader } from "./_generated/server";
 import { getOrThrow } from "convex-helpers/server/relationships";
 import { asyncMap } from "convex-helpers";
-import { internalMutation } from "./functions";
+import { internalAction, internalMutation } from "./functions";
+import { ActionCache } from "@convex-dev/action-cache";
+import { components, internal } from "./_generated/api";
+import { CONFIG, embeddings } from "./llm";
+
+const embedCache = new ActionCache(components.actionCache, {
+  action: internal.embed.generateEmbedding,
+});
+
+export const generateEmbedding = internalAction({
+  args: { input: v.string(), model: v.string() },
+  returns: v.array(v.number()),
+  handler: async (ctx, args) => {
+    const result = await embeddings.create(args);
+    return result.data[0].embedding;
+  },
+});
+
+export async function embedWithCache(ctx: ActionCtx, text: string) {
+  return embedCache.fetch(ctx, { model: CONFIG.embeddingModel, input: text });
+}
 
 export async function getTextByTitle(
   ctx: { db: DatabaseReader },
