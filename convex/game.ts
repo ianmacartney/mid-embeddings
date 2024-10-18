@@ -1,6 +1,6 @@
 import { Infer, v } from "convex/values";
 import { components, internal } from "./_generated/api";
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, query } from "./functions";
 import {
   getManyFrom,
   getOneFrom,
