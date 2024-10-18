@@ -1,12 +1,12 @@
 import { v, Validator } from "convex/values";
-import { internal } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { DataModel, Doc, Id } from "./_generated/dataModel";
 import {
   action,
   internalAction,
-  internalMutation,
+  internalMutation as internalMutationRaw,
   internalQuery,
-  mutation,
+  mutation as mutationRaw,
   query,
   QueryCtx,
 } from "./_generated/server";
@@ -26,6 +26,26 @@ import type {
 } from "convex/server";
 import schema from "./schema";
 import { getOneFrom } from "convex-helpers/server/relationships";
+import { Triggers } from "convex-helpers/server/triggers";
+import { TableAggregate } from "@convex-dev/aggregate";
+
+const triggers = new Triggers<DataModel>();
+
+export const leaderboard = new TableAggregate<
+  [Id<"games">, number],
+  DataModel,
+  "guesses"
+>(components.leaderboard, {
+  sortKey: (d) => [d.gameId, d.score],
+  sumValue: (d) => d.score,
+});
+triggers.register("guesses", leaderboard.trigger());
+
+const mutation = customMutation(mutationRaw, customCtx(triggers.wrapDB));
+const internalMutation = customMutation(
+  internalMutationRaw,
+  customCtx(triggers.wrapDB),
+);
 
 export const { runWithRetries, retry } = makeActionRetrier("functions:retry");
 export const migration = makeMigration(internalMutation, {

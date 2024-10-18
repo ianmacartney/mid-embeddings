@@ -9,6 +9,7 @@ import {
 import { pick, nullThrows } from "convex-helpers";
 import {
   error,
+  leaderboard,
   migration,
   ok,
   resultValidator,
@@ -88,6 +89,31 @@ export const listGuesses = userQuery({
         q.eq("userId", userId).eq("gameId", args.gameId),
       )
       .collect();
+  },
+});
+
+export const myRank = userQuery({
+  args: { gameId: v.id("games") },
+  handler: async (ctx, args) => {
+    const userId = ctx.user?._id;
+    if (!userId) {
+      return -1;
+    }
+    const bestGuess = await ctx.db
+      .query("guesses")
+      .withIndex("userId", (q) =>
+        q.eq("userId", userId).eq("gameId", args.gameId),
+      )
+      .first();
+    if (!bestGuess) {
+      return -1;
+    }
+    return leaderboard.offsetOf(
+      ctx,
+      [args.gameId, bestGuess.score],
+      bestGuess._id,
+      { prefix: [args.gameId] },
+    );
   },
 });
 
