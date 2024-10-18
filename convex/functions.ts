@@ -1,9 +1,8 @@
 import { v, Validator } from "convex/values";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { DataModel, Doc, Id } from "./_generated/dataModel";
 import {
   action,
-  DatabaseReader,
   internalAction,
   internalMutation,
   internalQuery,
@@ -17,7 +16,7 @@ import {
   customMutation,
   customQuery,
 } from "convex-helpers/server/customFunctions";
-import { auth } from "./auth";
+import { getAuthSessionId, getAuthUserId } from "@convex-dev/auth/server";
 import { makeActionRetrier } from "convex-helpers/server/retries";
 import { makeMigration } from "convex-helpers/server/migrations";
 import type {
@@ -34,7 +33,7 @@ export const migration = makeMigration(internalMutation, {
 });
 
 async function getUser(ctx: QueryCtx) {
-  const userId = await auth.getUserId(ctx);
+  const userId = await getAuthUserId(ctx);
   if (!userId) return null;
   const user = await ctx.db.get(userId);
   if (!user) {
@@ -62,7 +61,7 @@ export const userMutation = customMutation(
 export const userAction = customAction(
   action,
   customCtx(async (ctx) => {
-    const userId = await auth.getUserId(ctx);
+    const userId = await getAuthUserId(ctx);
     return { userId };
   }),
 );
@@ -70,7 +69,7 @@ export const userAction = customAction(
 async function getUserAndNamespace(ctx: QueryCtx, args: { namespace: string }) {
   const user = await getUser(ctx);
   if (!user) {
-    throw new Error("Not authenticated: " + (await auth.getSessionId(ctx)));
+    throw new Error("Not authenticated: " + (await getAuthSessionId(ctx)));
   }
   const namespace = await getOneFrom(
     ctx.db,

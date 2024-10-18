@@ -1,10 +1,8 @@
-import { query } from "./_generated/server";
-import { auth } from "./auth";
+import { userQuery } from "./functions";
 
-export const viewer = query({
+export const viewer = userQuery({
   args: {},
   handler: async (ctx) => {
-    const userId = await auth.getUserId(ctx);
-    return userId !== null ? ctx.db.get(userId) : null;
+    return ctx.user;
   },
 });
