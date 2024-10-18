@@ -1,6 +1,7 @@
 import { v, Validator } from "convex/values";
 import { components, internal } from "./_generated/api";
 import { DataModel, Doc, Id } from "./_generated/dataModel";
+/* eslint-disable no-restricted-imports */
 import {
   action,
   internalAction,
@@ -10,6 +11,7 @@ import {
   query,
   QueryCtx,
 } from "./_generated/server";
+/* eslint-enable no-restricted-imports */
 import {
   customAction,
   customCtx,
@@ -41,11 +43,12 @@ export const leaderboard = new TableAggregate<
 });
 triggers.register("guesses", leaderboard.trigger());
 
-const mutation = customMutation(mutationRaw, customCtx(triggers.wrapDB));
-const internalMutation = customMutation(
+export const mutation = customMutation(mutationRaw, customCtx(triggers.wrapDB));
+export const internalMutation = customMutation(
   internalMutationRaw,
   customCtx(triggers.wrapDB),
 );
+export { query, internalQuery, action, internalAction };
 
 export const { runWithRetries, retry } = makeActionRetrier("functions:retry");
 export const migration = makeMigration(internalMutation, {

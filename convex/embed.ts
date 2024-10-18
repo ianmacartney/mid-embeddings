@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
-import { DatabaseReader, internalMutation } from "./_generated/server";
+import { DatabaseReader } from "./_generated/server";
 import { getOrThrow } from "convex-helpers/server/relationships";
 import { asyncMap } from "convex-helpers";
+import { internalMutation } from "./functions";
 
 export async function getTextByTitle(
   ctx: { db: DatabaseReader },

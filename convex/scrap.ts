@@ -1,5 +1,4 @@
-import { internalMutation } from "./_generated/server";
-import { migration } from "./functions";
+import { migration, internalMutation } from "./functions";
 import { asyncMap } from "convex-helpers";
 
 export const deleteFeelsBatch = internalMutation({
