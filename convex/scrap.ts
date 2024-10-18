@@ -1,4 +1,4 @@
-import { migration, internalMutation } from "./functions";
+import { migrations, internalMutation } from "./functions";
 import { asyncMap } from "convex-helpers";
 
 export const deleteFeelsBatch = internalMutation({
@@ -35,7 +35,7 @@ export const deleteFeelsBatch = internalMutation({
 //   return userId as Id<"users">;
 // }
 
-export const deleteTexts = migration({
+export const deleteTexts = migrations.define({
   table: "texts",
   async migrateOne(ctx, doc) {
     const namespaceId = ctx.db.normalizeId(
