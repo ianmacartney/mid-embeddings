@@ -10,7 +10,7 @@ import { pick, nullThrows } from "convex-helpers";
 import {
   error,
   leaderboard,
-  migration,
+  migrations,
   ok,
   resultValidator,
   userAction,
@@ -173,7 +173,25 @@ export const totalGuesses = query({
   },
 });
 
-export const cleanUpGames = migration({
+export const addOldGuesses = migrations.define({
+  table: "guesses",
+  customRange: (query) =>
+    query.withIndex("by_creation_time", (q) =>
+      q.lt("_creationTime", Number(new Date("2024-10-22T16:20:00.000Z"))),
+    ),
+  async migrateOne(ctx, doc) {
+    const game = await ctx.db.get(doc.gameId);
+    if (!game?.active) {
+      return;
+    }
+    await counter.add(ctx, "total");
+    await counter.add(ctx, doc.gameId);
+    await counter.add(ctx, game.namespaceId);
+  },
+});
+export const backfill = migrations.runner(internal.game.addOldGuesses);
+
+export const cleanUpGames = migrations.define({
   table: "games",
   async migrateOne(ctx, doc) {
     const midpoint = await lookupMidpoint(ctx, {
@@ -190,3 +208,4 @@ export const cleanUpGames = migration({
     }
   },
 });
+export const runCleanUpGames = migrations.runner(internal.game.cleanUpGames);

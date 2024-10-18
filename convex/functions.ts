@@ -20,7 +20,7 @@ import {
 } from "convex-helpers/server/customFunctions";
 import { getAuthSessionId, getAuthUserId } from "@convex-dev/auth/server";
 import { makeActionRetrier } from "convex-helpers/server/retries";
-import { makeMigration } from "convex-helpers/server/migrations";
+import { Migrations } from "@convex-dev/migrations";
 import type {
   FieldPaths,
   NamedTableInfo,
@@ -51,8 +51,8 @@ export const internalMutation = customMutation(
 export { query, internalQuery, action, internalAction };
 
 export const { runWithRetries, retry } = makeActionRetrier("functions:retry");
-export const migration = makeMigration(internalMutation, {
-  migrationTable: "migrations",
+export const migrations = new Migrations(components.migrations, {
+  internalMutation,
 });
 
 async function getUser(ctx: QueryCtx) {
