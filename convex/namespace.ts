@@ -1,11 +1,7 @@
 import { Infer, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
-import {
-  DatabaseReader,
-  internalMutation,
-  internalQuery,
-} from "./_generated/server";
+import { DatabaseReader } from "./_generated/server";
 import {
   getOrThrow,
   getManyFrom,
@@ -14,6 +10,8 @@ import {
 } from "convex-helpers/server/relationships";
 import { asyncMap } from "convex-helpers";
 import {
+  internalMutation,
+  internalQuery,
   namespaceAdminAction,
   namespaceAdminMutation,
   namespaceAdminQuery,
