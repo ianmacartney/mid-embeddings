@@ -46,7 +46,7 @@ const { rateLimit } = defineRateLimits({
 
 export const listNamespaces = userQuery({
   args: {},
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     if (!ctx.user) {
       return [];
     }
@@ -98,7 +98,7 @@ export const update = namespaceAdminMutation({
 
 export const getNamespace = namespaceUserQuery({
   args: {},
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const isEmpty = !(await ctx.db
       .query("texts")
       .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
@@ -232,7 +232,7 @@ export const rateLimitMidSearch = internalMutation({
     rateLimit(ctx, { name: "midSearch", key: args.userId, throws: true }),
 });
 
-function reciprocalRankFusion(aIndex: number, bIndex: number, k?: number) {
+function reciprocalRankFusion(aIndex: number, bIndex: number) {
   const a = aIndex + 1;
   const b = bIndex + 1;
   return (a + b) / (a * b);
@@ -298,8 +298,8 @@ export const midpointSearch = namespaceUserAction({
 
     const topMatches = leftResults
       .filter(({ _id }) => rightRankById.has(_id))
-      .map(({ _id, _score: leftScore }, leftRank) => {
-        const { _score: rightScore, i: rightRank } = rightRankById.get(_id)!;
+      .map(({ _id, _score: _leftScore }, leftRank) => {
+        const { _score: _rightScore, i: rightRank } = rightRankById.get(_id)!;
         const leftOverallRank = leftOverallRankById.get(_id)!;
         const rightOverallRank = rightOverallRankById.get(_id)!;
         return {
@@ -514,7 +514,7 @@ export async function computeGuess(
   strategy: Strategy,
 ) {
   if (strategy === "midpoint" || strategy === "lxr") {
-    const score = dotProduct(midpoint.midpointEmbedding!, embedding);
+    const score = dotProduct(midpoint.midpointEmbedding, embedding);
     const leftScore = dotProduct(midpoint.leftEmbedding, embedding);
     const rightScore = dotProduct(midpoint.rightEmbedding, embedding);
     const lxrScore = leftScore * rightScore;
@@ -546,7 +546,7 @@ export async function computeGuess(
           ? (a, b) => b.rrfOverallScore - a.rrfOverallScore
           : (a, b) => b.rrfScore - a.rrfScore,
       );
-    const scores = await asyncMap(sortedMatches, async (match, i) => {
+    const scores = await asyncMap(sortedMatches, async (match) => {
       const text = await getTextByTitle(ctx, midpoint.namespaceId, match.title);
       const rankedEmbedding = await getOrThrow(ctx, text!.embeddingId);
       const score = dotProduct(rankedEmbedding.embedding, embedding);
