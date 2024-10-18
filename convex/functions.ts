@@ -1,15 +1,17 @@
 import { v, Validator } from "convex/values";
-import { internal } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { DataModel, Doc, Id } from "./_generated/dataModel";
+/* eslint-disable no-restricted-imports */
 import {
   action,
   internalAction,
-  internalMutation,
+  internalMutation as internalMutationRaw,
   internalQuery,
-  mutation,
+  mutation as mutationRaw,
   query,
   QueryCtx,
 } from "./_generated/server";
+/* eslint-enable no-restricted-imports */
 import {
   customAction,
   customCtx,
@@ -18,7 +20,7 @@ import {
 } from "convex-helpers/server/customFunctions";
 import { getAuthSessionId, getAuthUserId } from "@convex-dev/auth/server";
 import { makeActionRetrier } from "convex-helpers/server/retries";
-import { makeMigration } from "convex-helpers/server/migrations";
+import { Migrations } from "@convex-dev/migrations";
 import type {
   FieldPaths,
   NamedTableInfo,
@@ -26,10 +28,31 @@ import type {
 } from "convex/server";
 import schema from "./schema";
 import { getOneFrom } from "convex-helpers/server/relationships";
+import { Triggers } from "convex-helpers/server/triggers";
+import { TableAggregate } from "@convex-dev/aggregate";
+
+const triggers = new Triggers<DataModel>();
+
+export const leaderboard = new TableAggregate<
+  [Id<"games">, number],
+  DataModel,
+  "guesses"
+>(components.leaderboard, {
+  sortKey: (d) => [d.gameId, d.score],
+  sumValue: (d) => d.score,
+});
+triggers.register("guesses", leaderboard.trigger());
+
+export const mutation = customMutation(mutationRaw, customCtx(triggers.wrapDB));
+export const internalMutation = customMutation(
+  internalMutationRaw,
+  customCtx(triggers.wrapDB),
+);
+export { query, internalQuery, action, internalAction };
 
 export const { runWithRetries, retry } = makeActionRetrier("functions:retry");
-export const migration = makeMigration(internalMutation, {
-  migrationTable: "migrations",
+export const migrations = new Migrations<DataModel>(components.migrations, {
+  internalMutation,
 });
 
 async function getUser(ctx: QueryCtx) {

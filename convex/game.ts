@@ -1,6 +1,6 @@
 import { Infer, v } from "convex/values";
-import { internal } from "./_generated/api";
-import { internalMutation, query } from "./_generated/server";
+import { components, internal } from "./_generated/api";
+import { internalMutation, query } from "./functions";
 import {
   getManyFrom,
   getOneFrom,
@@ -9,7 +9,8 @@ import {
 import { pick, nullThrows } from "convex-helpers";
 import {
   error,
-  migration,
+  leaderboard,
+  migrations,
   ok,
   resultValidator,
   userAction,
@@ -17,9 +18,12 @@ import {
   vv,
 } from "./functions";
 import schema from "./schema";
-import { embed } from "./llm";
 import { computeGuess, lookupMidpoint } from "./namespace";
 import { asyncMap } from "convex-helpers";
+import { ShardedCounter } from "@convex-dev/sharded-counter";
+import { embedWithCache } from "./embed";
+
+const counter = new ShardedCounter(components.shardedCounter);
 
 const gameValidator = v.object({
   gameId: vv.id("games"),
@@ -91,6 +95,31 @@ export const listGuesses = userQuery({
   },
 });
 
+export const myRank = userQuery({
+  args: { gameId: v.id("games") },
+  handler: async (ctx, args) => {
+    const userId = ctx.user?._id;
+    if (!userId) {
+      return -1;
+    }
+    const bestGuess = await ctx.db
+      .query("guesses")
+      .withIndex("userId", (q) =>
+        q.eq("userId", userId).eq("gameId", args.gameId),
+      )
+      .first();
+    if (!bestGuess) {
+      return -1;
+    }
+    return leaderboard.offsetOf(
+      ctx,
+      [args.gameId, bestGuess.score],
+      bestGuess._id,
+      { prefix: [args.gameId] },
+    );
+  },
+});
+
 export const makeGuess = userAction({
   args: { gameId: v.id("games"), text: v.string() },
   handler: async (ctx, args) => {
@@ -99,7 +128,7 @@ export const makeGuess = userAction({
       console.error("Not authenticated");
       return;
     }
-    const embedding = await embed(args.text);
+    const embedding = await embedWithCache(ctx, args.text);
     await ctx.runMutation(internal.game.insertGuess, {
       ...args,
       userId,
@@ -127,11 +156,42 @@ export const insertGuess = internalMutation({
     // TODO: hardcode "rank" for now
     const results = await computeGuess(ctx, midpoint, embedding, "rank");
 
+    if (game.active) {
+      await counter.add(ctx, "total");
+      await counter.add(ctx, args.gameId);
+      await counter.add(ctx, game.namespaceId);
+      await counter.add(ctx, args.userId);
+    }
     return ctx.db.insert("guesses", { ...args, ...results });
   },
 });
 
-export const cleanUpGames = migration({
+export const totalGuesses = query({
+  args: {},
+  handler: async (ctx) => {
+    return counter.count(ctx, "total");
+  },
+});
+
+export const addOldGuesses = migrations.define({
+  table: "guesses",
+  customRange: (query) =>
+    query.withIndex("by_creation_time", (q) =>
+      q.lt("_creationTime", Number(new Date("2024-10-22T16:20:00.000Z"))),
+    ),
+  async migrateOne(ctx, doc) {
+    const game = await ctx.db.get(doc.gameId);
+    if (!game?.active) {
+      return;
+    }
+    await counter.add(ctx, "total");
+    await counter.add(ctx, doc.gameId);
+    await counter.add(ctx, game.namespaceId);
+  },
+});
+export const backfill = migrations.runFromCLI(internal.game.addOldGuesses);
+
+export const cleanUpGames = migrations.define({
   table: "games",
   async migrateOne(ctx, doc) {
     const midpoint = await lookupMidpoint(ctx, {
@@ -148,3 +208,6 @@ export const cleanUpGames = migration({
     }
   },
 });
+export const runCleanUpGames = migrations.runFromCLI(
+  internal.game.cleanUpGames,
+);

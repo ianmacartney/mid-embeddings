@@ -39,6 +39,25 @@ module.exports = {
         argsIgnorePattern: "^_",
       },
     ],
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            group: ["*/_generated/server"],
+            importNames: [
+              "query",
+              "mutation",
+              "action",
+              "internalQuery",
+              "internalMutation",
+              "internalAction",
+            ],
+            message: "Use functions.ts for query, mutation, or action",
+          },
+        ],
+      },
+    ],
 
     // Allow escaping the compiler
     "@typescript-eslint/ban-ts-comment": "error",

@@ -1,11 +1,7 @@
 import { Infer, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
-import {
-  DatabaseReader,
-  internalMutation,
-  internalQuery,
-} from "./_generated/server";
+import { DatabaseReader } from "./_generated/server";
 import {
   getOrThrow,
   getManyFrom,
@@ -14,6 +10,8 @@ import {
 } from "convex-helpers/server/relationships";
 import { asyncMap } from "convex-helpers";
 import {
+  internalMutation,
+  internalQuery,
   namespaceAdminAction,
   namespaceAdminMutation,
   namespaceAdminQuery,
@@ -23,21 +21,22 @@ import {
   userQuery,
 } from "./functions";
 import schema from "./schema";
-import { asyncMapChunked, chunk, embed, embedBatch } from "./llm";
+import { asyncMapChunked, chunk, embedBatch } from "./llm";
 import { calculateMidpoint, dotProduct } from "./linearAlgebra";
 import { partial } from "convex-helpers/validators";
 import { FunctionArgs, paginationOptsValidator } from "convex/server";
 import { omit } from "convex-helpers";
 import { nullThrows } from "convex-helpers";
-import { getTextByTitle } from "./embed";
-import { defineRateLimits } from "convex-helpers/server/rateLimit";
+import { embedWithCache, getTextByTitle } from "./embed";
+import { RateLimiter } from "@convex-dev/ratelimiter";
+import { components } from "./_generated/api";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-const { rateLimit } = defineRateLimits({
+const rate = new RateLimiter(components.ratelimiter, {
   createNamespace: { kind: "token bucket", period: 10 * SECOND, rate: 1 },
   addText: { kind: "token bucket", period: DAY, rate: 10_000 },
   basicSearch: { kind: "token bucket", period: SECOND, rate: 1, capacity: 5 },
@@ -69,8 +68,7 @@ export const upsertNamespace = userMutation({
       }
       return existing._id;
     }
-    await rateLimit(ctx, {
-      name: "createNamespace",
+    await rate.limit(ctx, "createNamespace", {
       key: ctx.user._id,
       throws: true,
     });
@@ -113,7 +111,7 @@ export const rateLimitAdds = internalMutation({
     count: v.number(),
   },
   handler: (ctx, { count, userId: key }) =>
-    rateLimit(ctx, { name: "addText", count, key, throws: true }),
+    rate.limit(ctx, "addText", { count, key, throws: true }),
 });
 
 export const addText = namespaceAdminAction({
@@ -186,7 +184,7 @@ export const listMidpoints = namespaceAdminQuery({
 export const rateLimitBasicSearch = internalMutation({
   args: { userId: v.id("users") },
   handler: (ctx, args) =>
-    rateLimit(ctx, { name: "basicSearch", key: args.userId, throws: true }),
+    rate.limit(ctx, "basicSearch", { key: args.userId, throws: true }),
 });
 
 export const basicVectorSearch = namespaceUserAction({
@@ -196,7 +194,7 @@ export const basicVectorSearch = namespaceUserAction({
     await ctx.runMutation(internal.namespace.rateLimitBasicSearch, {
       userId: ctx.user?._id,
     });
-    const embedding = await embed(args.text);
+    const embedding = await embedWithCache(ctx, args.text);
     const results = await ctx.vectorSearch("embeddings", "embedding", {
       vector: embedding,
       limit: 10,
@@ -229,7 +227,7 @@ export const getResults = internalQuery({
 export const rateLimitMidSearch = internalMutation({
   args: { userId: v.id("users") },
   handler: (ctx, args) =>
-    rateLimit(ctx, { name: "midSearch", key: args.userId, throws: true }),
+    rate.limit(ctx, "midSearch", { key: args.userId, throws: true }),
 });
 
 function reciprocalRankFusion(aIndex: number, bIndex: number) {
@@ -263,7 +261,8 @@ export const midpointSearch = namespaceUserAction({
           [midpoint?.leftEmbedding, args.left] as const,
           [midpoint?.rightEmbedding, args.right] as const,
         ].map(async ([existingEmbedding, text]) => {
-          const embedding = existingEmbedding || (await embed(text));
+          const embedding =
+            existingEmbedding || (await embedWithCache(ctx, text));
           const results = await ctx.vectorSearch("embeddings", "embedding", {
             vector: embedding,
             limit: 100,
@@ -477,7 +476,7 @@ export const Strategies = strategy.members.map((m) => m.value);
 export const makeGuess = namespaceUserAction({
   args: { guess: v.string(), left: v.string(), right: v.string(), strategy },
   handler: async (ctx, args) => {
-    const embedding = await embed(args.guess);
+    const embedding = await embedWithCache(ctx, args.guess);
     const results: {
       rank: number;
       score: number;
