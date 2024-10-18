@@ -18,10 +18,10 @@ import {
   vv,
 } from "./functions";
 import schema from "./schema";
-import { embed } from "./llm";
 import { computeGuess, lookupMidpoint } from "./namespace";
 import { asyncMap } from "convex-helpers";
 import { ShardedCounter } from "@convex-dev/sharded-counter";
+import { embedWithCache } from "./embed";
 
 const counter = new ShardedCounter(components.shardedCounter);
 
@@ -128,7 +128,7 @@ export const makeGuess = userAction({
       console.error("Not authenticated");
       return;
     }
-    const embedding = await embed(args.text);
+    const embedding = await embedWithCache(ctx, args.text);
     await ctx.runMutation(internal.game.insertGuess, {
       ...args,
       userId,

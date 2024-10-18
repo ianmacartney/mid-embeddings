@@ -21,13 +21,13 @@ import {
   userQuery,
 } from "./functions";
 import schema from "./schema";
-import { asyncMapChunked, chunk, embed, embedBatch } from "./llm";
+import { asyncMapChunked, chunk, embedBatch } from "./llm";
 import { calculateMidpoint, dotProduct } from "./linearAlgebra";
 import { partial } from "convex-helpers/validators";
 import { FunctionArgs, paginationOptsValidator } from "convex/server";
 import { omit } from "convex-helpers";
 import { nullThrows } from "convex-helpers";
-import { getTextByTitle } from "./embed";
+import { embedWithCache, getTextByTitle } from "./embed";
 import { RateLimiter } from "@convex-dev/ratelimiter";
 import { components } from "./_generated/api";
 
@@ -186,7 +186,7 @@ export const basicVectorSearch = namespaceUserAction({
     await ctx.runMutation(internal.namespace.rateLimitBasicSearch, {
       userId: ctx.user?._id,
     });
-    const embedding = await embed(args.text);
+    const embedding = await embedWithCache(ctx, args.text);
     const results = await ctx.vectorSearch("embeddings", "embedding", {
       vector: embedding,
       limit: 10,
@@ -245,7 +245,8 @@ export const midpointSearch = namespaceUserAction({
           [midpoint?.leftEmbedding, args.left] as const,
           [midpoint?.rightEmbedding, args.right] as const,
         ].map(async ([existingEmbedding, text]) => {
-          const embedding = existingEmbedding || (await embed(text));
+          const embedding =
+            existingEmbedding || (await embedWithCache(ctx, text));
           const results = await ctx.vectorSearch("embeddings", "embedding", {
             vector: embedding,
             limit: 100,
@@ -459,7 +460,7 @@ export const Strategies = strategy.members.map((m) => m.value);
 export const makeGuess = namespaceUserAction({
   args: { guess: v.string(), left: v.string(), right: v.string(), strategy },
   handler: async (ctx, args) => {
-    const embedding = await embed(args.guess);
+    const embedding = await embedWithCache(ctx, args.guess);
     const results: {
       rank: number;
       score: number;
