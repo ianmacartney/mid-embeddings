@@ -1,5 +1,5 @@
 import { Infer, v } from "convex/values";
-import { internal } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { internalMutation, query } from "./_generated/server";
 import {
   getManyFrom,
@@ -21,6 +21,9 @@ import schema from "./schema";
 import { embed } from "./llm";
 import { computeGuess, lookupMidpoint } from "./namespace";
 import { asyncMap } from "convex-helpers";
+import { ShardedCounter } from "@convex-dev/sharded-counter";
+
+const counter = new ShardedCounter(components.shardedCounter);
 
 const gameValidator = v.object({
   gameId: vv.id("games"),
@@ -153,7 +156,20 @@ export const insertGuess = internalMutation({
     // TODO: hardcode "rank" for now
     const results = await computeGuess(ctx, midpoint, embedding, "rank");
 
+    if (game.active) {
+      await counter.add(ctx, "total");
+      await counter.add(ctx, args.gameId);
+      await counter.add(ctx, game.namespaceId);
+      await counter.add(ctx, args.userId);
+    }
     return ctx.db.insert("guesses", { ...args, ...results });
+  },
+});
+
+export const totalGuesses = query({
+  args: {},
+  handler: async (ctx) => {
+    return counter.count(ctx, "total");
   },
 });
 
