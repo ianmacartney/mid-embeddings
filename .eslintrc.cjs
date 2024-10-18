@@ -37,7 +37,6 @@ module.exports = {
       {
         varsIgnorePattern: "^_",
         argsIgnorePattern: "^_",
-        importsIgnorePattern: ".*", // I'm fine with unused imports for now
       },
     ],
 
