@@ -1,7 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { Infer, v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
-import { rateLimitTables } from "convex-helpers/server/rateLimit";
 import { deprecated, pretendRequired } from "convex-helpers/validators";
 
 // The schema is normally optional, but Convex Auth
@@ -100,8 +99,6 @@ const schema = defineSchema({
     .index("gameId", ["gameId", "score"])
     // look up all the games I've been in, guesses in a game, top score in each.
     .index("userId", ["userId", "gameId", "rank"]),
-
-  ...rateLimitTables,
 });
 
 export default schema;

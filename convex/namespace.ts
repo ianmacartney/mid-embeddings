@@ -28,14 +28,15 @@ import { FunctionArgs, paginationOptsValidator } from "convex/server";
 import { omit } from "convex-helpers";
 import { nullThrows } from "convex-helpers";
 import { getTextByTitle } from "./embed";
-import { defineRateLimits } from "convex-helpers/server/rateLimit";
+import { RateLimiter } from "@convex-dev/ratelimiter";
+import { components } from "./_generated/api";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-const { rateLimit } = defineRateLimits({
+const rate = new RateLimiter(components.ratelimiter, {
   createNamespace: { kind: "token bucket", period: 10 * SECOND, rate: 1 },
   addText: { kind: "token bucket", period: DAY, rate: 10_000 },
   basicSearch: { kind: "token bucket", period: SECOND, rate: 1, capacity: 5 },
@@ -67,8 +68,7 @@ export const upsertNamespace = userMutation({
       }
       return existing._id;
     }
-    await rateLimit(ctx, {
-      name: "createNamespace",
+    await rate.limit(ctx, "createNamespace", {
       key: ctx.user._id,
       throws: true,
     });
@@ -105,15 +105,6 @@ export const getNamespace = namespaceUserQuery({
   },
 });
 
-export const rateLimitAdds = internalMutation({
-  args: {
-    userId: v.id("users"),
-    count: v.number(),
-  },
-  handler: (ctx, { count, userId: key }) =>
-    rateLimit(ctx, { name: "addText", count, key, throws: true }),
-});
-
 export const addText = namespaceAdminAction({
   args: {
     titled: v.optional(
@@ -134,9 +125,10 @@ export const addText = namespaceAdminAction({
         texts: chunk,
       }),
     );
-    await ctx.runMutation(internal.namespace.rateLimitAdds, {
-      userId: ctx.user._id,
+    await rate.limit(ctx, "addText", {
+      key: ctx.user._id,
       count: textsToEmbed.length,
+      throws: true,
     });
     console.debug(`Embedding ${textsToEmbed.length} texts`);
     await Promise.all(
@@ -184,7 +176,7 @@ export const listMidpoints = namespaceAdminQuery({
 export const rateLimitBasicSearch = internalMutation({
   args: { userId: v.id("users") },
   handler: (ctx, args) =>
-    rateLimit(ctx, { name: "basicSearch", key: args.userId, throws: true }),
+    rate.limit(ctx, "basicSearch", { key: args.userId, throws: true }),
 });
 
 export const basicVectorSearch = namespaceUserAction({
@@ -224,12 +216,6 @@ export const getResults = internalQuery({
   },
 });
 
-export const rateLimitMidSearch = internalMutation({
-  args: { userId: v.id("users") },
-  handler: (ctx, args) =>
-    rateLimit(ctx, { name: "midSearch", key: args.userId, throws: true }),
-});
-
 function reciprocalRankFusion(aIndex: number, bIndex: number) {
   const a = aIndex + 1;
   const b = bIndex + 1;
@@ -252,9 +238,7 @@ export const midpointSearch = namespaceUserAction({
       console.debug("Found midpoint in cache");
       return midpoint;
     }
-    await ctx.runMutation(internal.namespace.rateLimitMidSearch, {
-      userId: ctx.user?._id,
-    });
+    await rate.limit(ctx, "midSearch", { key: ctx.user._id, throws: true });
     const [[leftEmbedding, leftResults], [rightEmbedding, rightResults]] =
       await Promise.all(
         [
