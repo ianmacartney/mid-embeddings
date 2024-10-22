@@ -51,6 +51,7 @@ function CompareEmojis() {
   );
   useEffect(() => {
     if (emojisResult.status === "CanLoadMore") emojisResult.loadMore(100);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emojisResult.status]);
   const [words, setWords] = useState({ left: "", right: "", guess: "" });
   const sorted = emojisResult.results
@@ -59,13 +60,15 @@ function CompareEmojis() {
 
   const search = useAction(api.namespace.midpointSearch);
   const [midpoint, setMidpoint] = useState<Doc<"midpoints">>();
+  const { left, right } = words;
   useEffect(() => {
-    const { left, right } = words;
     if (!left || !right) return;
-    search({ namespace, left, right }).then((results) => {
-      setMidpoint(results);
-    });
-  }, [namespace, words.left, words.right]);
+    search({ namespace, left, right })
+      .then((results) => {
+        setMidpoint(results);
+      })
+      .catch(console.error);
+  }, [namespace, left, right, search]);
 
   return (
     <div className="flex items-center gap-4">
@@ -268,10 +271,12 @@ function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
   >([]);
   useEffect(() => {
     if (!text) return;
-    basicSearch({ namespace, text }).then((results) => {
-      setBasicResults(results);
-    });
-  }, [namespace, text]);
+    basicSearch({ namespace, text })
+      .then((results) => {
+        setBasicResults(results);
+      })
+      .catch(console.error);
+  }, [namespace, text, basicSearch]);
   return (
     <div className="flex flex-col items-center w-full gap-2">
       <div className="text-lg"> {text}</div>
