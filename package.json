@@ -35,7 +35,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "convex": "^1.16.6",
-    "convex-helpers": "^0.1.60",
+    "convex-helpers": "^0.1.63",
     "dayjs": "^1.11.11",
     "lodash.shuffle": "^4.2.0",
     "lucide-react": "^0.438.0",
