@@ -4,13 +4,10 @@ import {
   Authenticated,
   Unauthenticated,
   useAction,
-  useMutation,
   usePaginatedQuery,
-  useQuery,
 } from "convex/react";
-import Game from "@/components/Game";
 import { api } from "@convex/_generated/api";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -20,8 +17,6 @@ import {
 } from "@/components/ui/select";
 import { Strategy } from "@convex/namespace";
 import { Doc } from "@convex/_generated/dataModel";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
 import { FunctionReturnType } from "convex/server";
 import { Input } from "@/components/ui/input";
 
@@ -54,6 +49,7 @@ function CompareEmojis() {
   );
   useEffect(() => {
     if (emojisResult.status === "CanLoadMore") emojisResult.loadMore(100);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emojisResult.status]);
   const [words, setWords] = useState({ left: "", right: "", guess: "" });
   const sorted = emojisResult.results
@@ -62,18 +58,26 @@ function CompareEmojis() {
 
   const search = useAction(api.namespace.midpointSearch);
   const [midpoint, setMidpoint] = useState<Doc<"midpoints">>();
+  const { left, right } = words;
   useEffect(() => {
-    const { left, right } = words;
     if (!left || !right) return;
-    search({ namespace, left, right }).then((results) => {
-      setMidpoint(results);
-    });
-  }, [namespace, words.left, words.right]);
+    search({ namespace, left, right })
+      .then((results) => {
+        setMidpoint(results);
+      })
+      .catch(console.error);
+  }, [namespace, left, right, search]);
 
   return (
     <div className="flex items-center gap-4">
       <div className="flex flex-col items-center gap-4">
         <h2 className="text-2xl mb-4">Compare Emojis</h2>
+        <div className="text-center">
+          Choose two emojis to compare.
+          <br />
+          They will be compared based on their similarity according to AI
+          embeddings.
+        </div>
         <div className="flex gap-4">
           <Select
             value={words.left}
@@ -149,20 +153,35 @@ function Midpoint({
   left: string;
   strategy: Strategy;
 }) {
-  const getScore = (match: Doc<"midpoints">["topMatches"][0]): number => {
-    switch (strategy) {
-      case "lxr":
-        return match.lxrScore;
-      case "midpoint":
-        return match.score;
-      case "rank":
-        return match.rrfScore;
-      case "rankOverall":
-        return match.rrfOverallScore;
-    }
-  };
+  const getScore = useCallback(
+    (match: Doc<"midpoints">["topMatches"][0]): number => {
+      switch (strategy) {
+        case "lxr":
+          return match.lxrScore;
+        case "midpoint":
+          return match.score;
+        case "rank":
+          return match.rrfScore;
+        case "rankOverall":
+          return match.rrfOverallScore;
+      }
+    },
+    [strategy],
+  );
 
   function strategyName(strategy: Strategy) {
+    switch (strategy) {
+      case "lxr":
+        return "Cosine Product";
+      case "midpoint":
+        return "Cosine Midpoint";
+      case "rank":
+        return "Rank (Overlap)";
+      case "rankOverall":
+        return "Rank (Overall)";
+    }
+  }
+  function strategyDescription(strategy: Strategy) {
     switch (strategy) {
       case "lxr":
         return `Cosine similarity to ${left} multiplied by the cosine similarity to ${right}`;
@@ -193,10 +212,11 @@ function Midpoint({
     return [...midpoint.topMatches]
       .filter((m) => ![left, right].includes(m.title))
       .sort((a, b) => getScore(b) - getScore(a));
-  }, [midpoint, strategy]);
+  }, [midpoint, left, right, getScore]);
   if (!sorted.length) return null;
   return (
     <div className="flex flex-col items-center w-full gap-2">
+      <div className="text-lg text-center">{strategyName(strategy)}</div>
       <div className="flex flex-col justify-center">
         {sorted.slice(0, 10).map((result, i) => {
           const title = getHoverText(result);
@@ -211,7 +231,7 @@ function Midpoint({
           );
         })}
       </div>
-      <div className="">{strategyName(strategy)}</div>
+      <div className="">{strategyDescription(strategy)}</div>
     </div>
   );
 }
@@ -222,9 +242,14 @@ function SearchFeelings() {
     <div className="flex items-center gap-4">
       <div className="flex flex-col items-center gap-4">
         <h2 className="text-2xl mb-4">Feelings Finder</h2>
+        <div className="text-center">
+          Put anything in the search box and hit enter
+          <br />
+          to find related feelings (again, according to AI embeddings).
+        </div>
         <Input
           type="text"
-          placeholder="Hit Enter to search"
+          placeholder="Search for feelings"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -252,7 +277,7 @@ function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
         setBasicResults(results);
       })
       .catch(console.error);
-  }, [namespace, text]);
+  }, [namespace, text, basicSearch]);
   return (
     <div className="flex flex-col items-center w-full gap-2">
       <div className="text-lg"> {text}</div>
@@ -269,30 +294,5 @@ function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
           ))}
       </div>
     </div>
-  );
-}
-
-function DailyGame() {
-  // TODO: get namespace from env variable, default to first namespace.
-  const gameResult = useQuery(api.game.getDailyGame, {
-    namespace: "feelings",
-  });
-  if (gameResult && !gameResult.ok) {
-    return <div>Error: {gameResult.error}</div>;
-  }
-  if (!gameResult) {
-    return <div>Loading...</div>;
-  }
-  return (
-    <>
-      <Authenticated>
-        <div className="container">
-          <Game {...gameResult?.value} />
-        </div>
-      </Authenticated>
-      <Unauthenticated>
-        <SignInForm />
-      </Unauthenticated>
-    </>
   );
 }
