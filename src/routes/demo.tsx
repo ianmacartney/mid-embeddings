@@ -247,9 +247,11 @@ function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
   >([]);
   useEffect(() => {
     if (!text) return;
-    basicSearch({ namespace, text }).then((results) => {
-      setBasicResults(results);
-    });
+    basicSearch({ namespace, text })
+      .then((results) => {
+        setBasicResults(results);
+      })
+      .catch(console.error);
   }, [namespace, text]);
   return (
     <div className="flex flex-col items-center w-full gap-2">

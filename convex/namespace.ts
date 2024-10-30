@@ -111,9 +111,18 @@ export const addText = namespaceAdminAction({
       v.array(v.object({ title: v.string(), text: v.string() })),
     ),
     texts: v.optional(v.array(v.string())),
+    url: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<number> => {
-    const texts = (args.titled || []).concat(
+    if (!args.titled && !args.texts && !args.url) {
+      throw new Error("Must provide texts, titled texts, or a URL");
+    }
+    const titled = args.titled || [];
+    if (args.url) {
+      const text = await fetch(args.url).then((r) => r.json());
+      titled.push(...text);
+    }
+    const texts = titled.concat(
       (args.texts || []).map((text) => ({ text, title: text })),
     );
     console.debug(

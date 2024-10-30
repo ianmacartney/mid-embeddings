@@ -298,11 +298,28 @@ function Namespace() {
           </div>
         )}
         <Textarea
-          placeholder="Add text (skipping those already added) - enter JSON or line-delimited and hit enter"
+          placeholder="Add text (skipping those already added) - enter JSON (array of strings or {title, text}) or line-delimited and hit enter"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              const titled = parseText(e.currentTarget.value);
+              const value = e.currentTarget.value.trim();
+              if (value.startsWith("https://")) {
+                toast({ title: "Adding text" });
+                convex
+                  .action(fn.addText, { namespace, url: value })
+                  .then(() => {
+                    toast({ title: "Text added" });
+                    e.currentTarget.value = "";
+                  })
+                  .catch((e) => {
+                    toast({
+                      title: "Error adding text",
+                      description: e.message,
+                    });
+                  });
+                return;
+              }
+              const titled = parseText(value);
               e.currentTarget.blur();
               e.currentTarget.disabled = true;
               toast({ title: "Adding text" });
