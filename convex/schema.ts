@@ -1,13 +1,13 @@
 import { defineSchema, defineTable } from "convex/server";
-import { Infer, v } from "convex/values";
+import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
-import { deprecated, pretendRequired } from "convex-helpers/validators";
 
 // The schema is normally optional, but Convex Auth
 // requires indexes defined on `authTables`.
 // The schema provides more precise TypeScript types.
 const schema = defineSchema({
   ...authTables,
+
   users: defineTable(
     v.union(
       v.object({
@@ -51,6 +51,7 @@ const schema = defineSchema({
     vectorField: "embedding",
   }),
 
+  // this could all possibly be a cached action result.
   midpoints: defineTable({
     namespaceId: v.id("namespaces"),
     left: v.string(), // titles
@@ -77,17 +78,21 @@ const schema = defineSchema({
     ),
   }).index("namespaceId", ["namespaceId", "left", "right"]),
 
-  games: defineTable({
+  rounds: defineTable({
     namespaceId: v.id("namespaces"),
     left: v.string(), // titles
     right: v.string(),
     active: v.boolean(),
     // scheduledStarterId: v.id("_scheduled_functions"),
-    // endedAt: v.union(v.number(), v.null()),
-  }).index("namespaceId", ["namespaceId", "active"]),
-  // }).index("namespaceId", ["namespaceId"]),
+    // start: v.optional(v.number()),
+    // end: v.optional(v.number()),
+
+    // can drop namespace, since it'll be global. maybe to be replaced by something else?
+  })
+    .index("active", ["active"])
+    .index("namespaceId", ["namespaceId"]),
   guesses: defineTable({
-    gameId: v.id("games"),
+    roundId: v.id("rounds"),
     userId: v.id("users"),
     rank: v.number(),
     score: v.number(),
@@ -95,10 +100,10 @@ const schema = defineSchema({
     rightScore: v.number(),
     text: v.string(),
   })
-    // look up all the guesses in a game, top scores in each game.
-    .index("gameId", ["gameId", "score"])
-    // look up all the games I've been in, guesses in a game, top score in each.
-    .index("userId", ["userId", "gameId", "rank"]),
+    // look up all the guesses in a round, top scores in each round.
+    .index("roundId", ["roundId", "score"])
+    // look up all the rounds I've been in, guesses in a round, top score in each.
+    .index("userId", ["userId", "roundId", "rank"]),
 });
 
 export default schema;

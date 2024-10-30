@@ -76,11 +76,11 @@ export const upsertNamespace = userMutation({
   },
 });
 
-export const listGamesByNamespace = namespaceAdminQuery({
+export const listRoundsByNamespace = namespaceAdminQuery({
   args: {},
   handler: async (ctx) => {
     return ctx.db
-      .query("games")
+      .query("rounds")
       .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
       .order("desc")
       .take(20);
@@ -434,14 +434,14 @@ export const deleteMidpoint = namespaceAdminMutation({
       throw new Error("Midpoint not in authorized namespace");
     }
     if (midpoint) {
-      const game = await ctx.db
-        .query("games")
+      const round = await ctx.db
+        .query("rounds")
         .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
         .filter((q) => q.eq(q.field("left"), midpoint.left))
         .filter((q) => q.eq(q.field("right"), midpoint.right))
         .first();
-      if (game) {
-        throw new Error("Cannot delete midpoint with active game");
+      if (round) {
+        throw new Error("Cannot delete midpoint with active round");
       }
       await ctx.db.delete(args.midpointId);
     }
@@ -573,7 +573,7 @@ export async function computeGuess(
   }
 }
 
-export const makeGame = namespaceAdminMutation({
+export const makeRound = namespaceAdminMutation({
   args: {
     left: v.string(),
     right: v.string(),
@@ -588,7 +588,7 @@ export const makeGame = namespaceAdminMutation({
     } else if (midpoint.namespaceId !== ctx.namespace._id) {
       throw new Error("Midpoint not in authorized namespace");
     }
-    return ctx.db.insert("games", {
+    return ctx.db.insert("rounds", {
       ...args,
       namespaceId: ctx.namespace._id,
       active: false,
@@ -596,13 +596,13 @@ export const makeGame = namespaceAdminMutation({
   },
 });
 
-export const setGameActive = namespaceAdminMutation({
-  args: { gameId: v.id("games"), active: v.boolean() },
+export const setRoundActive = namespaceAdminMutation({
+  args: { roundId: v.id("rounds"), active: v.boolean() },
   handler: async (ctx, args) => {
-    const game = await getOrThrow(ctx, args.gameId);
-    if (game.namespaceId !== ctx.namespace._id) {
-      throw new Error("Game not in authorized namespace");
+    const round = await getOrThrow(ctx, args.roundId);
+    if (round.namespaceId !== ctx.namespace._id) {
+      throw new Error("Round not in authorized namespace");
     }
-    await ctx.db.patch(args.gameId, { active: args.active });
+    await ctx.db.patch(args.roundId, { active: args.active });
   },
 });

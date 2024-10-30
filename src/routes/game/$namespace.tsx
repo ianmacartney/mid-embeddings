@@ -16,7 +16,6 @@ import type { Strategy } from "@convex/namespace";
 import { Doc } from "@convex/_generated/dataModel";
 import { Flipboard } from "@/components/Flipboard";
 import {
-  CheckCheck,
   Coins,
   CornerDownRight,
   Earth,
@@ -26,16 +25,17 @@ import {
 import { Flipped, Flipper } from "react-flip-toolkit";
 
 export const Route = createFileRoute("/game/$namespace")({
-  component: NamespaceGame,
+  component: NamespaceRound,
 });
 
 const fn = api.namespace;
 
-function NamespaceGame() {
+function NamespaceRound() {
   const { namespace } = Route.useParams();
   const { name, description, isEmpty } =
     useQuery(fn.getNamespace, { namespace }) || {};
   const convex = useConvex();
+
   const midpoints = usePaginatedQuery(
     fn.listMidpoints,
     { namespace },
@@ -190,7 +190,7 @@ function NamespaceGame() {
               })}{" "}
             </span>
             <span className="text-gray-700">
-              new game starts in{" "}
+              new round starts in{" "}
               {(() => {
                 const now = new Date();
                 const midnight = new Date(
@@ -341,7 +341,7 @@ function NamespaceGame() {
                 <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
                   <Coins size={36} strokeWidth={2} />
                 </span>{" "}
-                Game #1
+                Round #1
               </div>
               {!isEmpty && (
                 <div className="flex flex-col items-start w-full gap-2 font-bold">
@@ -476,12 +476,12 @@ function checkString(input: unknown): string {
 
 function checkObject(input: unknown): { title: string; text: string } {
   if (!input || typeof input !== "object") {
-    throw new Error(`Must be an object: ${input}`);
+    throw new Error(`Must be an object: ${input as any}`);
   }
   if ("title" in input && "text" in input) {
     return { title: checkString(input.title), text: checkString(input.text) };
   }
-  throw new Error(`Must have title and text: ${input}`);
+  throw new Error(`Must have title and text: ${JSON.stringify(input)}`);
 }
 
 function parseText(input: string): { title: string; text: string }[] {
@@ -575,7 +575,7 @@ function Midpoint({
   randomize: boolean;
 }) {
   const search = useAction(fn.midpointSearch);
-  const makeGame = useMutation(fn.makeGame);
+  const makeRound = useMutation(fn.makeRound);
   const [midpoint, setMidpoint] = useState<Doc<"midpoints">>();
   const getScore = (match: Doc<"midpoints">["topMatches"][0]): number => {
     switch (strategy) {

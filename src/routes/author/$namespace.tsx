@@ -37,7 +37,7 @@ function Namespace() {
     useQuery(fn.getNamespace, { namespace }) || {};
   const convex = useConvex();
   const updateNamespace = useMutation(fn.update);
-  const games = useQuery(fn.listGamesByNamespace, { namespace }) ?? [];
+  const rounds = useQuery(fn.listRoundsByNamespace, { namespace }) ?? [];
   const midpoints = usePaginatedQuery(
     fn.listMidpoints,
     { namespace },
@@ -255,30 +255,31 @@ function Namespace() {
                 )}
               </div>
               <div className="flex flex-col items-center gap-2">
-                <span className="text-3xl font-bold">Games</span>
+                <span className="text-3xl font-bold">Rounds</span>
                 <div className="flex flex-col justify-center gap-2">
-                  {[...games].reverse().map((game) => (
-                    <div key={game._id} className="flex gap-2">
+                  {[...rounds].reverse().map((round) => (
+                    <div key={round._id} className="flex gap-2">
                       <Button
-                        key={game._id}
+                        key={round._id}
                         variant="secondary"
                         onClick={() => {
                           setWords((words) => ({
                             ...words,
-                            left: game.left,
-                            right: game.right,
+                            left: round.left,
+                            right: round.right,
                           }));
                         }}
                       >
-                        {game.left} - {game.right} {game.active ? "✅" : null}
+                        {round.left} - {round.right}{" "}
+                        {round.active ? "✅" : null}
                       </Button>
                       <Button
                         onClick={() => {
                           convex
-                            .mutation(fn.setGameActive, {
+                            .mutation(fn.setRoundActive, {
                               namespace,
-                              gameId: game._id,
-                              active: !game.active,
+                              roundId: round._id,
+                              active: !round.active,
                             })
                             .catch((e) =>
                               toast({
@@ -288,7 +289,7 @@ function Namespace() {
                             );
                         }}
                       >
-                        {game.active ? <Cross1Icon /> : "Activate"}
+                        {round.active ? <Cross1Icon /> : "Activate"}
                       </Button>
                     </div>
                   ))}
@@ -483,7 +484,7 @@ function Midpoint({
   strategy: Strategy;
 }) {
   const search = useAction(fn.midpointSearch);
-  const makeGame = useMutation(fn.makeGame);
+  const makeRound = useMutation(fn.makeRound);
   const [midpoint, setMidpoint] = useState<Doc<"midpoints">>();
   const getScore = useCallback(
     (match: Doc<"midpoints">["topMatches"][0]): number => {
@@ -560,14 +561,14 @@ function Midpoint({
             toast({ title: "No midpoint selected" });
             return;
           }
-          void makeGame({
+          void makeRound({
             namespace,
             left: midpoint.left,
             right: midpoint.right,
           });
         }}
       >
-        Create Game
+        Create Round
       </Button>
     </div>
   );
