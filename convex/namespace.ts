@@ -120,7 +120,22 @@ export const addText = namespaceAdminAction({
     const titled = args.titled || [];
     if (args.url) {
       const text = await fetch(args.url).then((r) => r.json());
-      titled.push(...text);
+      if (!Array.isArray(text)) {
+        throw new Error("Expected an array of strings");
+      }
+      if (text.length === 0) {
+        throw new Error("No texts found");
+      }
+      if (typeof text[0] === "string") {
+        titled.push(...text.map((text) => ({ text, title: text })));
+      } else {
+        if (!text[0].title || !text[0].text) {
+          throw new Error(
+            "Expected an array of objects with a text and title field",
+          );
+        }
+        titled.push(...text.map(({ title, text }) => ({ text, title })));
+      }
     }
     const texts = titled.concat(
       (args.texts || []).map((text) => ({ text, title: text })),
