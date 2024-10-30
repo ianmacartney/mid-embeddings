@@ -1,134 +1,127 @@
 import { useRef, useState } from "react";
 import { Input, InputProps } from "./ui/input";
-import { useAction, useQuery } from "convex/react";
+import { useConvex, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { Button } from "./ui/button";
 import { toast } from "./ui/use-toast";
-import { GameInfo } from "@convex/game";
+import { RoundInfo } from "@convex/round";
+import { ConvexError } from "convex/values";
+import { CornerDownRight } from "lucide-react";
 
-export const Game = (gameInfo: GameInfo | undefined) => {
+export const Game = (roundInfo: RoundInfo | undefined) => {
   // TODO: pull namespace from URL, with default
-  const currentGame = useRef(gameInfo);
-  if (!currentGame.current && gameInfo) {
-    currentGame.current = gameInfo;
+  const currentGame = useRef(roundInfo);
+  if (!currentGame.current && roundInfo) {
+    currentGame.current = roundInfo;
   }
-  const gameId = currentGame.current?.gameId;
-  if (!currentGame.current || !gameId) {
+  const roundId = currentGame.current?.roundId;
+  if (!currentGame.current || !roundId) {
     return <div>Loading...</div>;
   }
-  const { left, right, name, description } = currentGame.current;
-  const [mainDescription, ...subDescriptions] = description.split("\n");
   return (
     <div className="flex flex-col items-center justify-center">
-      <h1>{name}</h1>
-      <span className="text-xl">{mainDescription}</span>
-      {subDescriptions.map((description, i) => (
-        <span
-          key={`${name}-description-${i}`}
-          className="text-md text-secondary-foreground"
-        >
-          {description}
-        </span>
-      ))}
-      {gameInfo && currentGame.current.gameId !== gameInfo.gameId && (
+      {roundInfo && currentGame.current.roundId !== roundInfo.roundId && (
         <div className="bg-accent">
-          <span>There is a new game available to play</span>
+          <span>There is a new round available to play</span>
           <Button
             onClick={() => {
-              currentGame.current = gameInfo;
+              currentGame.current = roundInfo;
             }}
           >
-            Play the latest game
+            Play the latest round
           </Button>
         </div>
       )}
-      <Guesses {...{ gameId, left, right }} />
+      <GuessInput {...currentGame.current} />
     </div>
   );
 };
 export default Game;
 
-function Guesses({
-  gameId,
+function GuessInput({
+  roundId,
   left,
   right,
   ...props
 }: {
-  gameId: Id<"games">;
+  roundId: Id<"rounds">;
   left: string;
   right: string;
 } & InputProps) {
-  const guesses = useQuery(api.game.listGuesses, { gameId }) || [];
+  const convex = useConvex();
+  const guesses = useQuery(api.round.listGuesses, { roundId }) || [];
   const [guess, setGuess] = useState("");
   const [guessing, setGuessing] = useState(false);
-  const makeGuess = useAction(api.game.makeGuess);
+  const makeGuess = () => {
+    const check = (word: string) => {
+      if (guess.includes(word)) {
+        toast({
+          title: "Word cannot include target word",
+          description: `Your guess ${guess} includes ${word}.`,
+        });
+        return true;
+      }
+    };
+    setGuess("");
+    if (check(left) || check(right)) {
+      return;
+    }
+    for (const priorGuess of guesses) {
+      if (guess.toLowerCase() === priorGuess.text) {
+        toast({ title: `You've already guessed ${guess}` });
+        return;
+      }
+    }
+    setGuessing(true);
+    convex
+      .action(api.round.makeGuess, {
+        roundId,
+        text: guess.toLowerCase(),
+      })
+      .catch((e) => {
+        setGuess((existing) => (existing === "" ? guess : existing));
+        toast({
+          title: "Error making guess",
+          description: e instanceof ConvexError ? e.data : e.message,
+        });
+      })
+      .finally(() => {
+        setGuessing(false);
+      });
+  };
   return (
     <>
-      <div className="flex flex-row gap-4">
-        <span>{left}</span>
-        <label htmlFor="guess-input" className="invisible">
-          Enter a word whose meaning matches the other two words.
-        </label>
-        <Input
-          id="guess-input"
-          type="text"
-          placeholder="Enter a word"
-          value={guess}
-          onChange={(e) => setGuess(e.target.value.replace(" ", ""))}
-          disabled={guessing}
-          title="Enter a word whose meaning is between the two words"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              console.log("hi");
-              const check = (word: string) => {
-                if (guess.includes(word)) {
-                  toast({
-                    title: "Word cannot include target word",
-                    description: `Your guess ${guess} includes ${word}.`,
-                  });
-                  return true;
-                }
-              };
-              setGuess("");
-              if (check(left) || check(right)) {
-                return;
-              }
-              for (const priorGuess of guesses) {
-                if (guess.toLowerCase() === priorGuess.text) {
-                  toast({ title: `You've already guessed ${guess}` });
-                  return;
-                }
-              }
-              setGuessing(true);
-              makeGuess({ gameId, text: guess.toLowerCase() })
-                .catch((e) => {
-                  setGuess((existing) => (existing === "" ? guess : existing));
-                  toast({
-                    title: "Error",
-                    description: e.data,
-                  });
-                })
-                .finally(() => {
-                  setGuessing(false);
-                });
-            }
-          }}
-          {...props}
-        />
-        <span>{right}</span>
-      </div>
-      {guesses &&
-        guesses.map((guess) => (
-          <div key={guess._id}>
-            {f(guess.leftScore)} ⬅️ {guess.text}: {guess.rank}({f(guess.score)})
-            ➡️ {f(guess.rightScore)}
-          </div>
-        ))}
+      <label htmlFor="guess-input" className="invisible">
+        Enter a word whose meaning matches the other two words.
+      </label>
+      <Input
+        id="guess-input"
+        type="text"
+        placeholder="???"
+        value={guess}
+        onChange={(e) => setGuess(e.target.value.replace(" ", ""))}
+        disabled={guessing}
+        title="Enter a word whose meaning matches the two words"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            makeGuess();
+          }
+        }}
+        className="w-full h-[100px] rounded-md border-0 bg-background px-3 py-2 text-6xl ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-yellow-400"
+        {...props}
+      />
+      <button
+        className=" bg-white bg-opacity-10 text-4xl py-2 px-4 rounded-md w-full flex flex-row justify-center items-center gap-2"
+        onClick={() => {
+          makeGuess();
+        }}
+      >
+        <span className="text-yellow-400">
+          <CornerDownRight size={36} strokeWidth={2} />
+        </span>{" "}
+        Place Your Guess
+      </button>
     </>
   );
-}
-
-function f(num: number) {
-  return num.toPrecision(3);
 }
