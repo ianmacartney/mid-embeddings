@@ -15,9 +15,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Route as rootRoute } from './routes/__root'
 import { Route as DemoImport } from './routes/demo'
 import { Route as IndexImport } from './routes/index'
-import { Route as GameIndexImport } from './routes/game/index'
 import { Route as AuthorIndexImport } from './routes/author/index'
-import { Route as GameNamespaceImport } from './routes/game/$namespace'
 import { Route as AuthorNamespaceImport } from './routes/author/$namespace'
 
 // Create Virtual Routes
@@ -41,18 +39,8 @@ const IndexRoute = IndexImport.update({
   getParentRoute: () => rootRoute,
 } as any)
 
-const GameIndexRoute = GameIndexImport.update({
-  path: '/game/',
-  getParentRoute: () => rootRoute,
-} as any)
-
 const AuthorIndexRoute = AuthorIndexImport.update({
   path: '/author/',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const GameNamespaceRoute = GameNamespaceImport.update({
-  path: '/game/$namespace',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -93,25 +81,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthorNamespaceImport
       parentRoute: typeof rootRoute
     }
-    '/game/$namespace': {
-      id: '/game/$namespace'
-      path: '/game/$namespace'
-      fullPath: '/game/$namespace'
-      preLoaderRoute: typeof GameNamespaceImport
-      parentRoute: typeof rootRoute
-    }
     '/author/': {
       id: '/author/'
       path: '/author'
       fullPath: '/author'
       preLoaderRoute: typeof AuthorIndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/game/': {
-      id: '/game/'
-      path: '/game'
-      fullPath: '/game'
-      preLoaderRoute: typeof GameIndexImport
       parentRoute: typeof rootRoute
     }
   }
@@ -124,9 +98,7 @@ export const routeTree = rootRoute.addChildren({
   DemoRoute,
   LoginLazyRoute,
   AuthorNamespaceRoute,
-  GameNamespaceRoute,
   AuthorIndexRoute,
-  GameIndexRoute,
 })
 
 /* prettier-ignore-end */
@@ -141,9 +113,7 @@ export const routeTree = rootRoute.addChildren({
         "/demo",
         "/login",
         "/author/$namespace",
-        "/game/$namespace",
-        "/author/",
-        "/game/"
+        "/author/"
       ]
     },
     "/": {
@@ -158,14 +128,8 @@ export const routeTree = rootRoute.addChildren({
     "/author/$namespace": {
       "filePath": "author/$namespace.tsx"
     },
-    "/game/$namespace": {
-      "filePath": "game/$namespace.tsx"
-    },
     "/author/": {
       "filePath": "author/index.tsx"
-    },
-    "/game/": {
-      "filePath": "game/index.tsx"
     }
   }
 }
