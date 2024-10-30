@@ -1,20 +1,10 @@
-import { api } from "@convex/_generated/api";
-import { createFileRoute } from "@tanstack/react-router";
-import {
-  useAction,
-  useConvex,
-  useMutation,
-  usePaginatedQuery,
-  useQuery,
-} from "convex/react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "@/components/ui/use-toast";
-import { FunctionReturnType } from "convex/server";
-import type { Strategy } from "@convex/namespace";
-import { Doc } from "@convex/_generated/dataModel";
 import { Flipboard } from "@/components/Flipboard";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
+import { api } from "@convex/_generated/api";
+import { Id } from "@convex/_generated/dataModel";
+import { createFileRoute } from "@tanstack/react-router";
+import { useConvex, useQuery } from "convex/react";
 import {
   Coins,
   CornerDownRight,
@@ -22,45 +12,21 @@ import {
   LetterText,
   Trophy,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Flipped, Flipper } from "react-flip-toolkit";
 
 export const Route = createFileRoute("/game/$namespace")({
   component: NamespaceRound,
 });
 
-const fn = api.namespace;
-
 function NamespaceRound() {
-  const { namespace } = Route.useParams();
-  const { name, description, isEmpty } =
-    useQuery(fn.getNamespace, { namespace }) || {};
   const convex = useConvex();
-
-  const midpoints = usePaginatedQuery(
-    fn.listMidpoints,
-    { namespace },
-    { initialNumItems: 10 },
+  const round = useQuery(api.round.getDailyRound);
+  const guesses = useQuery(
+    api.round.listGuesses,
+    round?.ok ? { roundId: round.value.roundId } : "skip",
   );
-  const [words, setWords] = useState({
-    left: "happy",
-    right: "surprised",
-    guess: "",
-  });
-  useEffect(() => {
-    if (midpoints.results.length === 0) return;
-    if (words.left || words.right) return;
-    setWords({
-      left: midpoints.results[0].left,
-      right: midpoints.results[0].right,
-      guess: "",
-    });
-  }, [words.left, words.right, midpoints.results[0]]);
-
-  const [guessResults, setGuessResults] = useState<
-    FunctionReturnType<typeof fn.makeGuess>[]
-  >([]);
-
-  const [strategy, setStrategy] = useState<Strategy>("rank");
+  const [guess, setGuess] = useState("");
 
   const titles = [
     "Matching Madness",
@@ -80,8 +46,6 @@ function NamespaceRound() {
     "Etymological Enigma",
   ];
   const [data, setData] = useState(titles[0]);
-  const [guess, setGuess] = useState("");
-  const [guessing, setGuessing] = useState(false);
   const shuffleList = () => {
     setData(titles[Math.floor(Math.random() * titles.length)]);
   };
@@ -94,18 +58,18 @@ function NamespaceRound() {
   }, [circleSwap]);
 
   const makeGuess = () => {
-    if (guessResults.some((r) => r.guess === guess)) {
+    if (!round?.ok) {
+      throw new Error("Can't guess: " + (round?.error ?? "Round not found"));
+    }
+    if (guesses?.some((r) => r.text === guess)) {
       toast({ title: "Guess already made" });
       return;
     }
     convex
-      .action(fn.makeGuess, {
-        ...words,
-        guess,
-        namespace,
-        strategy,
+      .action(api.round.makeGuess, {
+        roundId: round.value.roundId,
+        text: guess,
       })
-      .then((results) => setGuessResults((arr) => [...arr, results]))
       .catch((e) => {
         e.currentTarget.value = guess;
         toast({
@@ -113,13 +77,16 @@ function NamespaceRound() {
           description: e.message,
         });
       });
-    setWords((words) => ({ ...words, guess }));
     setGuess("");
 
     setRandomize(false);
 
     setTimeout(() => setRandomize(true), 3000);
   };
+
+  if (round && !round.ok) {
+    return <div>Error: {round.error}</div>;
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen h-full overflow-scroll bg-background text-foreground">
@@ -143,7 +110,9 @@ function NamespaceRound() {
                 })}
               </Flipper>
             </div>
-            <div className="text-4xl">{description}</div>
+            <div className="text-4xl">
+              A game of mixed emotions For people who like venn diagrams
+            </div>
             <div className="absolute top-32 left-3/4">
               <Flipper flipKey={circleSwap}>
                 <div className="relative w-64 h-32 mt-4">
@@ -343,59 +312,39 @@ function NamespaceRound() {
                 </span>{" "}
                 Round #1
               </div>
-              {!isEmpty && (
-                <div className="flex flex-col items-start w-full gap-2 font-bold">
-                  <div className="flex flex-col items-start gap-4">
-                    <div className="text-5xl">{words.left}</div>
-                    <div className="text-5xl opacity-30">+</div>
-                    <div className="text-5xl">{words.right}</div>
-                    <div className="text-5xl opacity-30">=</div>
+              <div className="flex flex-col items-start w-full gap-2 font-bold">
+                <div className="flex flex-col items-start gap-4">
+                  <div className="text-5xl">{round?.value.left}</div>
+                  <div className="text-5xl opacity-30">+</div>
+                  <div className="text-5xl">{round?.value.right}</div>
+                  <div className="text-5xl opacity-30">=</div>
 
-                    <Input
-                      type="text"
-                      placeholder="???"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          makeGuess();
-                        }
-                      }}
-                      value={guess}
-                      onChange={(e) => setGuess(e.currentTarget.value)}
-                      className="w-full h-[100px] rounded-md border-0 bg-background px-3 py-2 text-6xl ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-yellow-400"
-                    />
-                    <button
-                      className=" bg-white bg-opacity-10 text-4xl py-2 px-4 rounded-md w-full flex flex-row justify-center items-center gap-2"
-                      onClick={() => {
+                  <Input
+                    type="text"
+                    placeholder="???"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
                         makeGuess();
-                      }}
-                    >
-                      <span className="text-yellow-400">
-                        <CornerDownRight size={36} strokeWidth={2} />
-                      </span>{" "}
-                      Place Your Guess
-                    </button>
-                    <div className="flex flex-col justify-center gap-2">
-                      {[...guessResults]
-                        .sort((a, b) =>
-                          strategy === "lxr"
-                            ? b.lxrScore - a.lxrScore
-                            : b.score - a.score,
-                        )
-                        .slice(0, 10)
-                        .map((guess, i) => (
-                          <div
-                            key={guess.guess + i}
-                            className="px-3 py-1 text-sm font-medium rounded-md bg-muted text-muted-foreground"
-                          >
-                            {f(guess.leftScore)} ⬅️ {guess.guess}: {guess.rank}(
-                            {f(guess.score)}) ➡️ {f(guess.rightScore)}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
+                      }
+                    }}
+                    value={guess}
+                    onChange={(e) => setGuess(e.currentTarget.value)}
+                    className="w-full h-[100px] rounded-md border-0 bg-background px-3 py-2 text-6xl ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-yellow-400"
+                  />
+                  <button
+                    className=" bg-white bg-opacity-10 text-4xl py-2 px-4 rounded-md w-full flex flex-row justify-center items-center gap-2"
+                    onClick={() => {
+                      makeGuess();
+                    }}
+                  >
+                    <span className="text-yellow-400">
+                      <CornerDownRight size={36} strokeWidth={2} />
+                    </span>{" "}
+                    Place Your Guess
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
 
@@ -417,13 +366,12 @@ function NamespaceRound() {
                   <div className="w-[87px]">PRICE</div>
                 </div>
 
-                <Midpoint
-                  namespace={namespace}
-                  left={words.left}
-                  right={words.right}
-                  strategy={strategy}
-                  randomize={randomize}
-                />
+                {round && (
+                  <Guesses
+                    roundId={round.value.roundId}
+                    randomize={randomize}
+                  />
+                )}
               </div>
 
               <div className="flex flex-row gap-2 mt-4">
@@ -442,187 +390,24 @@ function NamespaceRound() {
   );
 }
 
-function Words({ namespace }: { namespace: string }) {
-  const texts = usePaginatedQuery(
-    fn.paginateText,
-    {
-      namespace,
-    },
-    { initialNumItems: 10 },
-  );
-  return (
-    <div className="flex flex-col items-center gap-2 ">
-      <span className="text-3xl font-bold-TOM">Words</span>
-      {texts.results.map((text) => (
-        <div key={text._id} className="flex items-center gap-4">
-          <div className="flex-1 text-sm font-medium">
-            {text.title} {text.text === text.title ? null : `(${text.text})`}
-          </div>
-        </div>
-      ))}
-      {texts.status === "CanLoadMore" && (
-        <Button onClick={() => texts.loadMore(100)}>Load more</Button>
-      )}
-    </div>
-  );
-}
-
-function checkString(input: unknown): string {
-  if (typeof input !== "string") {
-    throw new Error("Must be a string");
-  }
-  return input;
-}
-
-function checkObject(input: unknown): { title: string; text: string } {
-  if (!input || typeof input !== "object") {
-    throw new Error(`Must be an object: ${input as any}`);
-  }
-  if ("title" in input && "text" in input) {
-    return { title: checkString(input.title), text: checkString(input.text) };
-  }
-  throw new Error(`Must have title and text: ${JSON.stringify(input)}`);
-}
-
-function parseText(input: string): { title: string; text: string }[] {
-  try {
-    const results = JSON.parse(input);
-    if (!Array.isArray(results)) {
-      throw new Error("Must be an array");
-    }
-    if (typeof results[0] === "string") {
-      return results.map(checkString).map((text) => ({ title: text, text }));
-    } else {
-      return results.map(checkObject);
-    }
-  } catch (e) {
-    const trimmed = input.trim();
-    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-      toast({
-        title: "Error adding text",
-        description:
-          (e as string) +
-          `You can add a JSON array of strings or objects like {"title": "foo", "text": "bar"}[] or lines of text separated by newlines`,
-      });
-      throw e;
-    }
-  }
-  const lines = input
-    .split("\n")
-    .map((line) => {
-      let ret = line;
-      if (ret.startsWith('"')) ret = ret.slice(1);
-      if (ret.endsWith(",")) ret = ret.slice(0, -1);
-      if (ret.endsWith('"')) ret = ret.slice(0, -1);
-      return ret;
-    })
-    .filter(Boolean);
-  if (lines.length < 2) {
-    toast({
-      title: "Error adding text",
-      description: "No lines found in input",
-    });
-    throw new Error("No lines found");
-  }
-  return lines.map((text) => ({ title: text, text }));
-}
-
-function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
-  const basicSearch = useAction(fn.basicVectorSearch);
-  const [basicResults, setBasicResults] = useState<
-    FunctionReturnType<typeof fn.basicVectorSearch>
-  >([]);
-  useEffect(() => {
-    if (!text) return;
-    basicSearch({ namespace, text }).then((results) => {
-      setBasicResults(results);
-    });
-  }, [namespace, text]);
-  return (
-    <div className="flex flex-col items-center w-full gap-2">
-      <div className="text-lg"> {text}</div>
-      <div className="flex flex-col justify-center gap-2">
-        {!!text.length &&
-          basicResults.map((result, i) => (
-            <div
-              key={result.title + i}
-              className="px-3 py-1 text-sm font-medium rounded-md bg-muted text-muted-foreground"
-            >
-              {result.title} - {f(result.score)}
-            </div>
-          ))}
-      </div>
-    </div>
-  );
-}
-
-function f(num: number | undefined) {
-  if (num === undefined) return "???";
-  return num.toPrecision(2);
-}
-
-function Midpoint({
-  namespace,
-  left,
-  right,
-  strategy,
+function Guesses({
+  roundId,
   randomize,
 }: {
-  namespace: string;
-  right: string;
-  left: string;
-  strategy: Strategy;
+  roundId: Id<"rounds">;
   randomize: boolean;
 }) {
-  const search = useAction(fn.midpointSearch);
-  const makeRound = useMutation(fn.makeRound);
-  const [midpoint, setMidpoint] = useState<Doc<"midpoints">>();
-  const getScore = (match: Doc<"midpoints">["topMatches"][0]): number => {
-    switch (strategy) {
-      case "lxr":
-        return match.lxrScore;
-      case "midpoint":
-        return match.score;
-      case "rank":
-        return match.rrfScore;
-      case "rankOverall":
-        return match.rrfOverallScore;
-    }
-  };
-  const getLR = (
-    match: Doc<"midpoints">["topMatches"][0],
-  ): [number, number] => {
-    switch (strategy) {
-      case "lxr":
-        return [match.leftScore, match.rightScore];
-      case "midpoint":
-        return [match.leftScore, match.rightScore];
-      case "rank":
-        return [match.leftRank, match.rightRank];
-      case "rankOverall":
-        return [match.leftOverallRank, match.rightOverallRank];
-    }
-  };
+  const guesses = useQuery(api.round.listGuesses, { roundId });
 
-  const sorted = useMemo(() => {
-    if (!midpoint) return [];
-    return [...midpoint.topMatches].sort((a, b) => getScore(b) - getScore(a));
-  }, [midpoint, strategy]);
-  useEffect(() => {
-    if (!left || !right) return;
-    search({ namespace, left, right }).then((results) => {
-      setMidpoint(results);
-    });
-  }, [namespace, left, right]);
   return (
     <>
-      {sorted.slice(0, 10).map((result, i) => {
+      {guesses?.slice(0, 10).map((result, i) => {
         //const [left, right] = getLR(result);
         return (
           <Flipboard
-            key={result.title + i}
+            key={result.text + i}
             rank={i + 1}
-            value={result.title}
+            value={result.text}
             points={i * 10}
             obfuscate={false}
             randomize={randomize}
