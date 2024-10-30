@@ -241,8 +241,9 @@ export const getResults = internalQuery({
 });
 
 function reciprocalRankFusion(aIndex: number, bIndex: number) {
-  const a = aIndex + 1;
-  const b = bIndex + 1;
+  const k = 10;
+  const a = aIndex + k;
+  const b = bIndex + k;
   return (a + b) / (a * b);
 }
 
