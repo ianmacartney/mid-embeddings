@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { FunctionReturnType } from "convex/server";
 import { Cross1Icon, TrashIcon } from "@radix-ui/react-icons";
@@ -44,15 +44,16 @@ function Namespace() {
     { initialNumItems: 10 },
   );
   const [words, setWords] = useState({ left: "", right: "", guess: "" });
+  const firstResult = midpoints.results[0];
   useEffect(() => {
-    if (midpoints.results.length === 0) return;
+    if (firstResult === undefined) return;
     if (words.left || words.right) return;
     setWords({
-      left: midpoints.results[0].left,
-      right: midpoints.results[0].right,
+      left: firstResult.left,
+      right: firstResult.right,
       guess: "",
     });
-  }, [words.left, words.right, midpoints.results[0]]);
+  }, [words.left, words.right, firstResult]);
 
   const [guessResults, setGuessResults] = useState<
     FunctionReturnType<typeof fn.makeGuess>[]
@@ -71,7 +72,7 @@ function Namespace() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  updateNamespace({
+                  void updateNamespace({
                     namespace,
                     name: e.currentTarget.value,
                   }).then(() =>
@@ -80,7 +81,7 @@ function Namespace() {
                 }
               }}
               onBlur={(e) =>
-                updateNamespace({
+                void updateNamespace({
                   namespace,
                   name: e.target.value,
                 }).then(() => toast({ title: "Name updated", description: "" }))
@@ -92,7 +93,7 @@ function Namespace() {
               defaultValue={description}
               className="text-sm text-muted-foreground"
               onBlur={(e) =>
-                updateNamespace({
+                void updateNamespace({
                   namespace,
                   description: e.target.value,
                 }).then(() => toast({ title: "Description updated" }))
@@ -385,12 +386,12 @@ function checkString(input: unknown): string {
 
 function checkObject(input: unknown): { title: string; text: string } {
   if (!input || typeof input !== "object") {
-    throw new Error(`Must be an object: ${input}`);
+    throw new Error(`Must be an object: ${input as any}`);
   }
   if ("title" in input && "text" in input) {
     return { title: checkString(input.title), text: checkString(input.text) };
   }
-  throw new Error(`Must have title and text: ${input}`);
+  throw new Error(`Must have title and text: ${JSON.stringify(input)}`);
 }
 
 function parseText(input: string): { title: string; text: string }[] {
@@ -443,10 +444,10 @@ function BasicSearch({ namespace, text }: { namespace: string; text: string }) {
   >([]);
   useEffect(() => {
     if (!text) return;
-    basicSearch({ namespace, text }).then((results) => {
+    void basicSearch({ namespace, text }).then((results) => {
       setBasicResults(results);
     });
-  }, [namespace, text]);
+  }, [namespace, text, basicSearch]);
   return (
     <div className="flex flex-col items-center w-full gap-2">
       <div className="text-lg"> {text}</div>
@@ -484,18 +485,21 @@ function Midpoint({
   const search = useAction(fn.midpointSearch);
   const makeGame = useMutation(fn.makeGame);
   const [midpoint, setMidpoint] = useState<Doc<"midpoints">>();
-  const getScore = (match: Doc<"midpoints">["topMatches"][0]): number => {
-    switch (strategy) {
-      case "lxr":
-        return match.lxrScore;
-      case "midpoint":
-        return match.score;
-      case "rank":
-        return match.rrfScore;
-      case "rankOverall":
-        return match.rrfOverallScore;
-    }
-  };
+  const getScore = useCallback(
+    (match: Doc<"midpoints">["topMatches"][0]): number => {
+      switch (strategy) {
+        case "lxr":
+          return match.lxrScore;
+        case "midpoint":
+          return match.score;
+        case "rank":
+          return match.rrfScore;
+        case "rankOverall":
+          return match.rrfOverallScore;
+      }
+    },
+    [strategy],
+  );
   const getLR = (
     match: Doc<"midpoints">["topMatches"][0],
   ): [number, number] => {
@@ -514,13 +518,13 @@ function Midpoint({
   const sorted = useMemo(() => {
     if (!midpoint) return [];
     return [...midpoint.topMatches].sort((a, b) => getScore(b) - getScore(a));
-  }, [midpoint, strategy]);
+  }, [midpoint, getScore]);
   useEffect(() => {
     if (!left || !right) return;
-    search({ namespace, left, right }).then((results) => {
+    void search({ namespace, left, right }).then((results) => {
       setMidpoint(results);
     });
-  }, [namespace, left, right]);
+  }, [namespace, left, right, search]);
   return (
     <div className="flex flex-col items-center w-full gap-2">
       <div className="text-lg">
@@ -541,7 +545,7 @@ function Midpoint({
       </div>
       <Button
         onClick={() => {
-          search({ namespace, left, right, skipCache: true }).then(
+          void search({ namespace, left, right, skipCache: true }).then(
             (results) => {
               setMidpoint(results);
             },
@@ -556,7 +560,11 @@ function Midpoint({
             toast({ title: "No midpoint selected" });
             return;
           }
-          makeGame({ namespace, left: midpoint.left, right: midpoint.right });
+          void makeGame({
+            namespace,
+            left: midpoint.left,
+            right: midpoint.right,
+          });
         }}
       >
         Create Game

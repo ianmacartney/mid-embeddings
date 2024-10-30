@@ -38,7 +38,7 @@ const DAY = 24 * HOUR;
 
 const rate = new RateLimiter(components.ratelimiter, {
   createNamespace: { kind: "token bucket", period: 10 * SECOND, rate: 1 },
-  addText: { kind: "token bucket", period: DAY, rate: 10_000 },
+  addText: { kind: "token bucket", period: DAY, rate: 10_000, shards: 10 },
   basicSearch: { kind: "token bucket", period: SECOND, rate: 1, capacity: 5 },
   midSearch: { kind: "token bucket", period: SECOND, rate: 1 },
 });
