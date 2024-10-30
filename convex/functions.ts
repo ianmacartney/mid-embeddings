@@ -227,6 +227,7 @@ function withSystemFields(validator: Validator<any, any, any>): any {
 }
 
 export const vv = {
+  ...v,
   id: <Table extends TableNamesInDataModel<DataModel>>(table: Table) =>
     v.id(table),
   doc: <Table extends TableNamesInDataModel<DataModel>>(
