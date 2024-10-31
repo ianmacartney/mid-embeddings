@@ -30,6 +30,7 @@ import { nullThrows } from "convex-helpers";
 import { embedWithCache, getTextByTitle } from "./embed";
 import { RateLimiter } from "@convex-dev/ratelimiter";
 import { components } from "./_generated/api";
+import { NUM_MATCHES } from "./shared";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -619,10 +620,13 @@ export const makeRound = namespaceAdminMutation({
     } else if (midpoint.namespaceId !== ctx.namespace._id) {
       throw new Error("Midpoint not in authorized namespace");
     }
-    const matches = await asyncMap(midpoint.topMatches, async (m) => {
-      const text = await getTextByTitle(ctx, midpoint.namespaceId, m.title);
-      return text!.embeddingId;
-    });
+    const matches = await asyncMap(
+      midpoint.topMatches.slice(0, NUM_MATCHES),
+      async (m) => {
+        const text = await getTextByTitle(ctx, midpoint.namespaceId, m.title);
+        return text!.embeddingId;
+      },
+    );
     return ctx.db.insert("rounds", {
       ...args,
       namespaceId: ctx.namespace._id,

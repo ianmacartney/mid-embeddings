@@ -5,6 +5,7 @@ import { toast } from "@/components/ui/use-toast";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { RoundInfo } from "@convex/round";
+import { MAX_ATTEMPTS, NUM_MATCHES } from "@convex/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { useConvex, useConvexAuth, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
@@ -276,9 +277,16 @@ function Guesses({
 }) {
   const guesses = useQuery(api.round.listGuesses, { roundId });
 
+  const ranked = (guesses?.attempts ?? [])
+    .slice(0, MAX_ATTEMPTS)
+    .map((r) => ({
+      ...r,
+      score: r.rank === undefined ? 0 : NUM_MATCHES - r.rank,
+    }))
+    .sort((a, b) => b.score - a.score);
   return (
     <>
-      {guesses?.attempts.slice(0, 10).map((result, i) => {
+      {ranked.map((result) => {
         //const [left, right] = getLR(result);
         return (
           <Flipboard

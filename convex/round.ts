@@ -16,8 +16,8 @@ import {
   userQuery,
   vv as v,
 } from "./functions";
+import { MAX_ATTEMPTS, NUM_MATCHES } from "./shared";
 
-const MAX_ATTEMPTS = 10;
 const counter = new ShardedCounter(components.shardedCounter, {
   shards: {
     "guesses:total": 50,
@@ -158,12 +158,12 @@ export const insertGuess = internalMutation({
       return error("Round is not active.");
     }
 
-    const index = round.matches.indexOf(args.embeddingId);
+    const index = round.matches.slice(0, NUM_MATCHES).indexOf(args.embeddingId);
     const rank = index === -1 ? undefined : index;
     const attempt = { text: args.text, rank };
     let score = guess?.score ?? 0;
     if (rank !== undefined) {
-      score += round.matches.length - rank;
+      score += NUM_MATCHES - rank;
     }
     if (guess) {
       if (
@@ -177,15 +177,15 @@ export const insertGuess = internalMutation({
       if (guess.attempts.length >= MAX_ATTEMPTS) {
         return error("Max attempts reached.");
       }
-      const matches = guess.attempts.filter((t) => t.rank !== undefined).length;
-      if (round.matches.length === matches) {
+      const matched = guess.attempts.filter((t) => t.rank !== undefined).length;
+      if (NUM_MATCHES === matched) {
         return error("All matches already guessed.");
       }
       if (guess.submittedAt) {
         return error("Guesses already submitted.");
       }
       let submittedAt = guess.submittedAt;
-      if (rank !== undefined && round.matches.length === matches + 1) {
+      if (rank !== undefined && NUM_MATCHES === matched + 1) {
         submittedAt = Date.now();
         // Extra credit for guessing all matches with extra attempts left.
         score += MAX_ATTEMPTS - guess.attempts.length;

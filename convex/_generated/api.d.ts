@@ -19,6 +19,7 @@ import type * as llm from "../llm.js";
 import type * as namespace from "../namespace.js";
 import type * as round from "../round.js";
 import type * as scrap from "../scrap.js";
+import type * as shared from "../shared.js";
 import type * as users from "../users.js";
 
 import type {
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   namespace: typeof namespace;
   round: typeof round;
   scrap: typeof scrap;
+  shared: typeof shared;
   users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
