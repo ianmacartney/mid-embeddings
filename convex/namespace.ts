@@ -639,6 +639,9 @@ export const setRoundActive = namespaceAdminMutation({
     if (round.namespaceId !== ctx.namespace._id) {
       throw new Error("Round not in authorized namespace");
     }
+    if (args.active && !ctx.namespace.public) {
+      throw new Error("Cannot activate round for private namespace");
+    }
     await ctx.db.patch(args.roundId, { active: args.active });
   },
 });

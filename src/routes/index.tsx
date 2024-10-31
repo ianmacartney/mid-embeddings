@@ -2,20 +2,12 @@ import { Flipboard } from "@/components/Flipboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
-import { useAuthActions } from "@convex-dev/auth/react";
-import { isRateLimitError } from "@convex-dev/ratelimiter";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { RoundInfo } from "@convex/round";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  Unauthenticated,
-  useConvex,
-  useConvexAuth,
-  useQuery,
-} from "convex/react";
+import { useConvex, useConvexAuth, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
-import dayjs from "dayjs";
 import {
   Coins,
   CornerDownRight,
@@ -23,8 +15,7 @@ import {
   LetterText,
   Trophy,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Flipped, Flipper } from "react-flip-toolkit";
+import { useState } from "react";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -58,32 +49,9 @@ function Home() {
         )}
       <main className="flex flex-col items-center justify-center w-full max-w-4xl gap-8 px-6 py-8">
         <Round round={currentRound ?? roundResult?.value} />
-        <Unauthenticated>
-          <LogInAnonymouslyByDefault />
-        </Unauthenticated>
       </main>
     </div>
   );
-}
-
-function LogInAnonymouslyByDefault() {
-  const { signIn } = useAuthActions();
-  const { isAuthenticated, isLoading } = useConvexAuth();
-  useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
-      void signIn("anonymous").catch((e) => {
-        if (isRateLimitError(e)) {
-          toast({
-            title: "Too many users being created.",
-            description:
-              "Log in with GitHub or retry " +
-              dayjs(Date.now() + e.data.retryAfter).fromNow(),
-          });
-        }
-      });
-    }
-  }, [isAuthenticated, isLoading, signIn]);
-  return null;
 }
 
 function GuessInput({ round }: { round?: RoundInfo }) {

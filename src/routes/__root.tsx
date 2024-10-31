@@ -8,11 +8,7 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
-import {
-  Authenticated,
-  ConvexReactClient,
-  Unauthenticated,
-} from "convex/react";
+import { ConvexReactClient } from "convex/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Flipped, Flipper } from "react-flip-toolkit";
 
@@ -117,18 +113,7 @@ function Content() {
               </h1>
             </Link>
           </div>
-          <Unauthenticated>
-            {/* TODO: make login a popover */}
-            <Link
-              to="/login"
-              className="text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground"
-            >
-              Log In
-            </Link>
-          </Unauthenticated>
-          <Authenticated>
-            <UserMenu />
-          </Authenticated>
+          <UserMenu />
         </nav>
       </header>
       <main className="flex grow flex-col">
@@ -144,12 +129,6 @@ function Content() {
             <FooterLink href="https://vitejs.dev">Vite</FooterLink>,{" "}
             <FooterLink href="https://react.dev/">React</FooterLink> and{" "}
             <FooterLink href="https://ui.shadcn.com/">shadcn/ui</FooterLink>.
-            <Link
-              to="/author"
-              className="p-2 text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground"
-            >
-              Author your own
-            </Link>
           </div>
         </div>
       </footer>
