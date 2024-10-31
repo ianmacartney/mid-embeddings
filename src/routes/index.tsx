@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const round = useQuery(api.round.getDailyRound);
+  const round = useQuery(api.round.getActiveRound);
   if (round && !round.ok) {
     return <div>Error: {round.error}</div>;
   }
@@ -107,19 +107,19 @@ function Round({ round }: { round: RoundInfo | undefined }) {
   const makeGuess = () => {
     if (!round) {
       toast({
-        title: "Error making guess",
+        title: "Error submitting guess",
         description: "Round not found",
       });
       return;
     }
     if (!isAuthenticated) {
       toast({
-        title: "Error making guess",
+        title: "Error submitting guess",
         description: "Not logged in.",
       });
       return;
     }
-    if (guesses?.some((r) => r.text === guess)) {
+    if (guesses?.attempts.some((r) => r.text === guess)) {
       toast({ title: "Guess already made" });
       return;
     }
@@ -458,7 +458,7 @@ function Guesses({
 
   return (
     <>
-      {guesses?.slice(0, 10).map((result, i) => {
+      {guesses?.attempts.slice(0, 10).map((result, i) => {
         //const [left, right] = getLR(result);
         return (
           <Flipboard

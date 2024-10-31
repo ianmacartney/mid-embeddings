@@ -34,11 +34,13 @@ import { TableAggregate } from "@convex-dev/aggregate";
 const triggers = new Triggers<DataModel>();
 
 export const leaderboard = new TableAggregate<
-  [Id<"rounds">, number],
+  [Id<"rounds">, number, number],
   DataModel,
   "guesses"
 >(components.leaderboard, {
-  sortKey: (d) => [d.roundId, d.score],
+  // Sort by score, then by submission time (newest first)
+  // So we can find the first submission with the highest score for a given round.
+  sortKey: (d) => [d.roundId, d.score, -(d.submittedAt ?? Infinity)],
   sumValue: (d) => d.score,
 });
 triggers.register("guesses", leaderboard.trigger());

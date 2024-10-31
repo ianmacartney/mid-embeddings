@@ -1,12 +1,12 @@
 import { ShardedCounter } from "@convex-dev/sharded-counter";
-import { asyncMap, nullThrows, pick } from "convex-helpers";
-import { getManyFrom, getOrThrow } from "convex-helpers/server/relationships";
+import { getOrThrow } from "convex-helpers/server/relationships";
 import { ConvexError, Infer } from "convex/values";
 import { components, internal } from "./_generated/api";
-import { embedWithCache } from "./embed";
+import { embedWithCache, getTextByTitle } from "./embed";
 import {
   error,
   internalMutation,
+  internalQuery,
   leaderboard,
   migrations,
   ok,
@@ -16,8 +16,8 @@ import {
   userQuery,
   vv as v,
 } from "./functions";
-import { computeGuess, lookupMidpoint } from "./namespace";
 
+const MAX_ATTEMPTS = 10;
 const counter = new ShardedCounter(components.shardedCounter, {
   shards: {
     "guesses:total": 50,
@@ -35,7 +35,7 @@ const roundValidator = v.object({
 });
 export type RoundInfo = Infer<typeof roundValidator>;
 
-export const getDailyRound = query({
+export const getActiveRound = query({
   args: {},
   returns: resultValidator(roundValidator),
   handler: async (ctx) => {
@@ -50,7 +50,8 @@ export const getDailyRound = query({
     // TODO: if future rounds are invite-only / not public, check access
     return ok({
       roundId: round._id,
-      ...pick(round, ["left", "right"]),
+      left: round.left,
+      right: round.right,
     });
   },
 });
@@ -60,14 +61,14 @@ export const listGuesses = userQuery({
   handler: async (ctx, args) => {
     const userId = ctx.user?._id;
     if (!userId) {
-      return [];
+      return null;
     }
     return ctx.db
       .query("guesses")
       .withIndex("userId", (q) =>
         q.eq("userId", userId).eq("roundId", args.roundId),
       )
-      .collect();
+      .unique();
   },
 });
 
@@ -89,10 +90,19 @@ export const myRank = userQuery({
     }
     return leaderboard.offsetOf(
       ctx,
-      [args.roundId, bestGuess.score],
+      [args.roundId, bestGuess.score, bestGuess.submittedAt ?? Infinity],
       bestGuess._id,
       { prefix: [args.roundId] },
     );
+  },
+});
+
+export const lookupTextEmbedding = internalQuery({
+  args: { roundId: v.id("rounds"), text: v.string(), userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const round = await getOrThrow(ctx, args.roundId);
+    const text = await getTextByTitle(ctx, round.namespaceId, args.text);
+    return text?.embeddingId;
   },
 });
 
@@ -103,38 +113,98 @@ export const makeGuess = userAction({
     if (!userId) {
       throw new ConvexError("Not logged in.");
     }
-    const embedding = await embedWithCache(ctx, args.text);
-    await ctx.runMutation(internal.round.insertGuess, {
-      ...args,
+    let embeddingId = await ctx.runQuery(internal.round.lookupTextEmbedding, {
       userId,
-      embedding,
+      roundId: args.roundId,
+      text: args.text,
+    });
+    if (!embeddingId) {
+      // TODO: we should be stricter in only accepting text that matches the
+      // stem of valid text.
+      const results = await ctx.vectorSearch("embeddings", "embedding", {
+        vector: await embedWithCache(ctx, args.text),
+        limit: 1,
+      });
+      if (results.length === 0) {
+        return error(`No embedding found for ${args.text}.`);
+      }
+      embeddingId = results[0]._id;
+    }
+    await ctx.runMutation(internal.round.insertGuess, {
+      userId,
+      roundId: args.roundId,
+      text: args.text,
+      embeddingId,
     });
   },
 });
 
 export const insertGuess = internalMutation({
   args: {
+    userId: v.id("users"),
     roundId: v.id("rounds"),
     text: v.string(),
-    userId: v.id("users"),
-    embedding: v.array(v.number()),
+    embeddingId: v.id("embeddings"),
   },
-  handler: async (ctx, { embedding, ...args }) => {
+  handler: async (ctx, args) => {
+    const guess = await ctx.db
+      .query("guesses")
+      .withIndex("userId", (q) =>
+        q.eq("userId", args.userId).eq("roundId", args.roundId),
+      )
+      .unique();
     const round = await getOrThrow(ctx, args.roundId);
-    const midpoint = nullThrows(
-      await lookupMidpoint(ctx, {
-        namespaceId: round.namespaceId,
-        left: round.left,
-        right: round.right,
-      }),
-    );
-    // TODO: hardcode "rank" for now
-    const results = await computeGuess(ctx, midpoint, embedding, "rank");
     if (!round.active) {
       return error("Round is not active.");
     }
 
-    return ctx.db.insert("guesses", { ...args, ...results });
+    const index = round.matches.indexOf(args.embeddingId);
+    const rank = index === -1 ? undefined : index;
+    const attempt = { text: args.text, rank };
+    let score = guess?.score ?? 0;
+    if (rank !== undefined) {
+      score += round.matches.length - rank;
+    }
+    if (guess) {
+      if (
+        guess.attempts.some(
+          (t) =>
+            t.text === args.text || (rank !== undefined && t.rank === rank),
+        )
+      ) {
+        return error("Guess already submitted.");
+      }
+      if (guess.attempts.length >= MAX_ATTEMPTS) {
+        return error("Max attempts reached.");
+      }
+      const matches = guess.attempts.filter((t) => t.rank !== undefined).length;
+      if (round.matches.length === matches) {
+        return error("All matches already guessed.");
+      }
+      if (guess.submittedAt) {
+        return error("Guesses already submitted.");
+      }
+      let submittedAt = guess.submittedAt;
+      if (rank !== undefined && round.matches.length === matches + 1) {
+        submittedAt = Date.now();
+        // Extra credit for guessing all matches with extra attempts left.
+        score += MAX_ATTEMPTS - guess.attempts.length;
+      } else if (guess.attempts.length === MAX_ATTEMPTS - 1) {
+        submittedAt = Date.now();
+      }
+      await ctx.db.patch(guess._id, {
+        attempts: [...guess.attempts, attempt],
+        score,
+        submittedAt,
+      });
+    } else {
+      await ctx.db.insert("guesses", {
+        roundId: args.roundId,
+        userId: args.userId,
+        attempts: [attempt],
+        score,
+      });
+    }
 
     await counter.add(ctx, "guesses:total");
     await counter.add(ctx, `guesses:${args.roundId}`);
@@ -168,22 +238,3 @@ export const addOldGuesses = migrations.define({
   },
 });
 export const backfill = migrations.runner(internal.round.addOldGuesses);
-
-export const cleanUpRounds = migrations.define({
-  table: "rounds",
-  async migrateOne(ctx, doc) {
-    const midpoint = await lookupMidpoint(ctx, {
-      namespaceId: doc.namespaceId,
-      left: doc.left,
-      right: doc.right,
-    });
-    if (!midpoint) {
-      await asyncMap(
-        getManyFrom(ctx.db, "guesses", "roundId", doc._id),
-        async (guess) => ctx.db.delete(guess._id),
-      );
-      return ctx.db.delete(doc._id);
-    }
-  },
-});
-export const runCleanUpRounds = migrations.runner(internal.round.cleanUpRounds);

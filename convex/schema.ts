@@ -82,6 +82,7 @@ const schema = defineSchema({
     namespaceId: v.id("namespaces"),
     left: v.string(), // titles
     right: v.string(),
+    matches: v.array(v.id("embeddings")),
     active: v.boolean(),
     // scheduledStarterId: v.id("_scheduled_functions"),
     // start: v.optional(v.number()),
@@ -94,16 +95,16 @@ const schema = defineSchema({
   guesses: defineTable({
     roundId: v.id("rounds"),
     userId: v.id("users"),
-    rank: v.number(),
     score: v.number(),
-    leftScore: v.number(),
-    rightScore: v.number(),
-    text: v.string(),
+    attempts: v.array(
+      v.object({ text: v.string(), rank: v.optional(v.number()) }),
+    ),
+    submittedAt: v.optional(v.number()),
   })
     // look up all the guesses in a round, top scores in each round.
     .index("roundId", ["roundId", "score"])
-    // look up all the rounds I've been in, guesses in a round, top score in each.
-    .index("userId", ["userId", "roundId", "rank"]),
+    // look up all the rounds I've been in, guesses in a round.
+    .index("userId", ["userId", "roundId"]),
 });
 
 export default schema;

@@ -586,7 +586,7 @@ export async function computeGuess(
       return score;
     });
     const [topScore, rank] = scores.reduce(
-      ([max], score, i) => [Math.max(max, score), i],
+      ([max, rank], score, i) => [Math.max(max, score), score > max ? i : rank],
       [-Infinity, Infinity],
     );
     return {
@@ -614,10 +614,15 @@ export const makeRound = namespaceAdminMutation({
     } else if (midpoint.namespaceId !== ctx.namespace._id) {
       throw new Error("Midpoint not in authorized namespace");
     }
+    const matches = await asyncMap(midpoint.topMatches, async (m) => {
+      const text = await getTextByTitle(ctx, midpoint.namespaceId, m.title);
+      return text!.embeddingId;
+    });
     return ctx.db.insert("rounds", {
       ...args,
       namespaceId: ctx.namespace._id,
       active: false,
+      matches,
     });
   },
 });
