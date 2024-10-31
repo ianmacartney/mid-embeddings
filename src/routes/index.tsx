@@ -1,3 +1,4 @@
+import { Code } from "@/components/Code";
 import { Flipboard } from "@/components/Flipboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,7 +83,7 @@ function GuessInput({ round }: { round?: RoundInfo }) {
     setGuess("");
     if (
       guesses?.attempts.some(
-        (r) => r.text.toLowerCase().trim() === guess.toLowerCase().trim(),
+        (r) => r.title.toLowerCase().trim() === guess.toLowerCase().trim(),
       )
     ) {
       toast({ title: "Guess already made" });
@@ -104,7 +105,7 @@ function GuessInput({ round }: { round?: RoundInfo }) {
     convex
       .action(api.round.makeGuess, {
         roundId: round.roundId,
-        text: guess.trim(),
+        title: guess.trim(),
       })
       .catch((e) => {
         setGuess((existing) => (existing === "" ? guess : existing));
@@ -289,14 +290,14 @@ function Guesses({
       {ranked.map((result) => {
         //const [left, right] = getLR(result);
         return (
-          <Flipboard
-            key={result.text + i}
-            rank={i + 1}
-            value={result.text}
-            points={i * 10}
-            obfuscate={false}
-            randomize={randomize}
-          />
+          <div className="flex flex-row gap-4">
+            <Code>
+              <span className="text-xl">{result.score || "-"}</span>
+            </Code>
+            <Code>
+              <span className="text-xl">{result.title}</span>
+            </Code>
+          </div>
         );
       })}
     </>

@@ -98,16 +98,16 @@ export const myRank = userQuery({
 });
 
 export const lookupTextEmbedding = internalQuery({
-  args: { roundId: v.id("rounds"), text: v.string(), userId: v.id("users") },
+  args: { roundId: v.id("rounds"), title: v.string(), userId: v.id("users") },
   handler: async (ctx, args) => {
     const round = await getOrThrow(ctx, args.roundId);
-    const text = await getTextByTitle(ctx, round.namespaceId, args.text);
+    const text = await getTextByTitle(ctx, round.namespaceId, args.title);
     return text?.embeddingId;
   },
 });
 
 export const makeGuess = userAction({
-  args: { roundId: v.id("rounds"), text: v.string() },
+  args: { roundId: v.id("rounds"), title: v.string() },
   handler: async (ctx, args) => {
     const userId = ctx.userId;
     if (!userId) {
@@ -116,24 +116,24 @@ export const makeGuess = userAction({
     let embeddingId = await ctx.runQuery(internal.round.lookupTextEmbedding, {
       userId,
       roundId: args.roundId,
-      text: args.text,
+      title: args.title,
     });
     if (!embeddingId) {
       // TODO: we should be stricter in only accepting text that matches the
       // stem of valid text.
       const results = await ctx.vectorSearch("embeddings", "embedding", {
-        vector: await embedWithCache(ctx, args.text),
+        vector: await embedWithCache(ctx, args.title),
         limit: 1,
       });
       if (results.length === 0) {
-        return error(`No embedding found for ${args.text}.`);
+        return error(`No embedding found for ${args.title}.`);
       }
       embeddingId = results[0]._id;
     }
     await ctx.runMutation(internal.round.insertGuess, {
       userId,
       roundId: args.roundId,
-      text: args.text,
+      title: args.title,
       embeddingId,
     });
   },
@@ -143,7 +143,7 @@ export const insertGuess = internalMutation({
   args: {
     userId: v.id("users"),
     roundId: v.id("rounds"),
-    text: v.string(),
+    title: v.string(),
     embeddingId: v.id("embeddings"),
   },
   handler: async (ctx, args) => {
@@ -160,7 +160,7 @@ export const insertGuess = internalMutation({
 
     const index = round.matches.slice(0, NUM_MATCHES).indexOf(args.embeddingId);
     const rank = index === -1 ? undefined : index;
-    const attempt = { text: args.text, rank };
+    const attempt = { title: args.title, rank };
     let score = guess?.score ?? 0;
     if (rank !== undefined) {
       score += NUM_MATCHES - rank;
@@ -169,7 +169,7 @@ export const insertGuess = internalMutation({
       if (
         guess.attempts.some(
           (t) =>
-            t.text === args.text || (rank !== undefined && t.rank === rank),
+            t.title === args.title || (rank !== undefined && t.rank === rank),
         )
       ) {
         return error("Guess already submitted.");

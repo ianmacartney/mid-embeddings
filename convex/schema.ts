@@ -97,7 +97,7 @@ const schema = defineSchema({
     userId: v.id("users"),
     score: v.number(),
     attempts: v.array(
-      v.object({ text: v.string(), rank: v.optional(v.number()) }),
+      v.object({ title: v.string(), rank: v.optional(v.number()) }),
     ),
     submittedAt: v.optional(v.number()),
   })
