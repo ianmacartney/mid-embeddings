@@ -18,7 +18,15 @@ import {
 } from "./functions";
 import { computeGuess, lookupMidpoint } from "./namespace";
 
-const counter = new ShardedCounter(components.shardedCounter);
+const counter = new ShardedCounter(components.shardedCounter, {
+  shards: {
+    "guesses:total": 50,
+  },
+});
+// For user-specific counters, we don't need to shard.
+const userCounter = new ShardedCounter(components.shardedCounter, {
+  defaultShards: 1,
+});
 
 const roundValidator = v.object({
   roundId: v.id("rounds"),
@@ -122,22 +130,23 @@ export const insertGuess = internalMutation({
     );
     // TODO: hardcode "rank" for now
     const results = await computeGuess(ctx, midpoint, embedding, "rank");
-
-    if (round.active) {
-      // TODO: these counts should be more explicitly named guesses
-      await counter.add(ctx, "total");
-      await counter.add(ctx, args.roundId);
-      await counter.add(ctx, round.namespaceId);
-      await counter.add(ctx, args.userId);
+    if (!round.active) {
+      return error("Round is not active.");
     }
+
     return ctx.db.insert("guesses", { ...args, ...results });
+
+    await counter.add(ctx, "guesses:total");
+    await counter.add(ctx, `guesses:${args.roundId}`);
+    await counter.add(ctx, `guesses:${round.namespaceId}`);
+    await userCounter.add(ctx, `guesses:${args.userId}`);
   },
 });
 
 export const totalGuesses = query({
   args: {},
   handler: async (ctx) => {
-    return counter.count(ctx, "total");
+    return counter.count(ctx, "guesses:total");
   },
 });
 
@@ -149,12 +158,13 @@ export const addOldGuesses = migrations.define({
     ),
   async migrateOne(ctx, doc) {
     const round = await ctx.db.get(doc.roundId);
-    if (!round?.active) {
+    if (!round) {
       return;
     }
-    await counter.add(ctx, "total");
-    await counter.add(ctx, doc.roundId);
-    await counter.add(ctx, round.namespaceId);
+    await counter.add(ctx, "guesses:total");
+    await counter.add(ctx, `guesses:${doc.roundId}`);
+    await counter.add(ctx, `guesses:${round.namespaceId}`);
+    await userCounter.add(ctx, `guesses:${doc.userId}`);
   },
 });
 export const backfill = migrations.runner(internal.round.addOldGuesses);
