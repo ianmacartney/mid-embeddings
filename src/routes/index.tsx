@@ -86,7 +86,7 @@ function LogInAnonymouslyByDefault() {
   return null;
 }
 
-function Round({ round }: { round: RoundInfo | undefined }) {
+function GuessInput({ round }: { round?: RoundInfo }) {
   const convex = useConvex();
   const { isAuthenticated } = useConvexAuth();
   const guesses = useQuery(
@@ -94,7 +94,103 @@ function Round({ round }: { round: RoundInfo | undefined }) {
     round?.roundId ? { roundId: round.roundId } : "skip",
   );
   const [guess, setGuess] = useState("");
+  const [guessing, setGuessing] = useState(false);
+  const makeGuess = () => {
+    if (!round) {
+      toast({
+        title: "Error submitting guess",
+        description: "Round not found",
+      });
+      return;
+    }
+    if (!isAuthenticated) {
+      toast({
+        title: "Error submitting guess",
+        description: "Not logged in.",
+      });
+      return;
+    }
+    setGuess("");
+    if (
+      guesses?.attempts.some(
+        (r) => r.text.toLowerCase().trim() === guess.toLowerCase().trim(),
+      )
+    ) {
+      toast({ title: "Guess already made" });
+      return;
+    }
+    const check = (word: string) => {
+      if (guess.includes(word)) {
+        toast({
+          title: "Word cannot include target word",
+          description: `Your guess ${guess} includes ${word}.`,
+        });
+        return true;
+      }
+    };
+    if (check(round.left) || check(round.right)) {
+      return;
+    }
+    setGuessing(true);
+    convex
+      .action(api.round.makeGuess, {
+        roundId: round.roundId,
+        text: guess.trim(),
+      })
+      .catch((e) => {
+        setGuess((existing) => (existing === "" ? guess : existing));
+        const description =
+          e instanceof ConvexError
+            ? e.data
+            : "Something went wrong. Try refreshing your browser.";
+        toast({
+          title: "Error making guess",
+          description,
+        });
+      })
+      .finally(() => {
+        setGuessing(false);
+      });
+  };
+  const hint = "Enter a word whose meaning matches the other two words.";
+  return (
+    <>
+      <label htmlFor="guess-input" className="invisible">
+        {hint}
+      </label>
+      <Input
+        id="guess-input"
+        type="text"
+        title={hint}
+        placeholder="???"
+        disabled={guessing || !isAuthenticated}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            makeGuess();
+          }
+        }}
+        value={guess}
+        onChange={(e) => setGuess(e.target.value.replace(" ", ""))}
+        className="w-full h-[100px] rounded-md border-0 bg-background px-3 py-2 text-6xl ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-yellow-400"
+      />
+      <button
+        className=" bg-white bg-opacity-10 text-4xl py-2 px-4 rounded-md w-full flex flex-row justify-center items-center gap-2"
+        disabled={!isAuthenticated}
+        onClick={() => {
+          makeGuess();
+        }}
+      >
+        <span className="text-yellow-400">
+          <CornerDownRight size={36} strokeWidth={2} />
+        </span>{" "}
+        Place Your Guess
+      </button>
+    </>
+  );
+}
 
+function Round({ round }: { round: RoundInfo | undefined }) {
   const titles = [
     "Matching Madness",
     "Mixed Matches",
@@ -117,54 +213,11 @@ function Round({ round }: { round: RoundInfo | undefined }) {
     setData(titles[Math.floor(Math.random() * titles.length)]);
   };
   const [circleSwap, setCircleSwap] = useState(false);
-  const [randomize, setRandomize] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => setCircleSwap(!circleSwap), 5000);
     return () => clearTimeout(timer);
   }, [circleSwap]);
-
-  const makeGuess = () => {
-    if (!round) {
-      toast({
-        title: "Error submitting guess",
-        description: "Round not found",
-      });
-      return;
-    }
-    if (!isAuthenticated) {
-      toast({
-        title: "Error submitting guess",
-        description: "Not logged in.",
-      });
-      return;
-    }
-    if (guesses?.attempts.some((r) => r.text === guess)) {
-      toast({ title: "Guess already made" });
-      return;
-    }
-    convex
-      .action(api.round.makeGuess, {
-        roundId: round.roundId,
-        text: guess,
-      })
-      .catch((e) => {
-        setGuess(guess);
-        const description =
-          e instanceof ConvexError
-            ? e.data
-            : "Something went wrong. Try refreshing your browser.";
-        toast({
-          title: "Error making guess",
-          description,
-        });
-      });
-    setGuess("");
-
-    setRandomize(false);
-
-    setTimeout(() => setRandomize(true), 3000);
-  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen h-full overflow-scroll bg-background text-foreground">
@@ -397,32 +450,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   <div className="text-5xl">{round?.right}</div>
                   <div className="text-5xl opacity-30">=</div>
 
-                  <Input
-                    type="text"
-                    placeholder="???"
-                    disabled={!isAuthenticated}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        makeGuess();
-                      }
-                    }}
-                    value={guess}
-                    onChange={(e) => setGuess(e.currentTarget.value)}
-                    className="w-full h-[100px] rounded-md border-0 bg-background px-3 py-2 text-6xl ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-yellow-400"
-                  />
-                  <button
-                    className=" bg-white bg-opacity-10 text-4xl py-2 px-4 rounded-md w-full flex flex-row justify-center items-center gap-2"
-                    disabled={!isAuthenticated}
-                    onClick={() => {
-                      makeGuess();
-                    }}
-                  >
-                    <span className="text-yellow-400">
-                      <CornerDownRight size={36} strokeWidth={2} />
-                    </span>{" "}
-                    Place Your Guess
-                  </button>
+                  <GuessInput round={round} />
                 </div>
               </div>
             </div>
@@ -446,9 +474,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   <div className="w-[87px]">PRICE</div>
                 </div>
 
-                {round && (
-                  <Guesses roundId={round.roundId} randomize={randomize} />
-                )}
+                {round && <Guesses roundId={round.roundId} randomize={false} />}
               </div>
 
               <div className="flex flex-row gap-2 mt-4">
