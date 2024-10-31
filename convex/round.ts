@@ -52,7 +52,6 @@ export const listGuesses = userQuery({
   handler: async (ctx, args) => {
     const userId = ctx.user?._id;
     if (!userId) {
-      console.error("Not authenticated");
       return [];
     }
     return ctx.db

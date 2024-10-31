@@ -4,6 +4,7 @@ import {
   Authenticated,
   Unauthenticated,
   useConvex,
+  useConvexAuth,
   useQuery,
 } from "convex/react";
 import { useEffect, useState } from "react";
@@ -21,6 +22,9 @@ import {
 } from "lucide-react";
 import { Flipped, Flipper } from "react-flip-toolkit";
 import { RoundInfo } from "@convex/round";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { isRateLimitError } from "@convex-dev/ratelimiter";
+import dayjs from "dayjs";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -34,19 +38,38 @@ function Home() {
   return (
     <div className="flex flex-col items-center min-h-screen h-full overflow-scroll bg-background text-foreground">
       <main className="flex flex-col items-center justify-center w-full max-w-4xl gap-8 px-6 py-8">
-        <Authenticated>
-          <Round round={round?.value} />
-        </Authenticated>
+        <Round round={round?.value} />
         <Unauthenticated>
-          <SignInForm />
+          <LogInAnonymouslyByDefault />
         </Unauthenticated>
       </main>
     </div>
   );
 }
 
+function LogInAnonymouslyByDefault() {
+  const { signIn } = useAuthActions();
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      void signIn("anonymous").catch((e) => {
+        if (isRateLimitError(e)) {
+          toast({
+            title: "Too many users being created.",
+            description:
+              "Log in with GitHub or retry " +
+              dayjs(Date.now() + e.data.retryAfter).fromNow(),
+          });
+        }
+      });
+    }
+  }, [isAuthenticated, isLoading, signIn]);
+  return null;
+}
+
 function Round({ round }: { round: RoundInfo | undefined }) {
   const convex = useConvex();
+  const { isAuthenticated } = useConvexAuth();
   const guesses = useQuery(
     api.round.listGuesses,
     round?.roundId ? { roundId: round.roundId } : "skip",
@@ -343,6 +366,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   <Input
                     type="text"
                     placeholder="???"
+                    disabled={!isAuthenticated}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -355,6 +379,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   />
                   <button
                     className=" bg-white bg-opacity-10 text-4xl py-2 px-4 rounded-md w-full flex flex-row justify-center items-center gap-2"
+                    disabled={!isAuthenticated}
                     onClick={() => {
                       makeGuess();
                     }}

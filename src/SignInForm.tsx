@@ -5,6 +5,7 @@ import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { toast } from "./components/ui/use-toast";
 import dayjs from "dayjs";
 import { ComponentProps } from "react";
+import { isRateLimitError } from "@convex-dev/ratelimiter";
 
 export function SignInForm() {
   return (
@@ -48,11 +49,14 @@ function SignInAnonymously() {
       type="button"
       onClick={() =>
         void signIn("anonymous").catch((e) => {
-          toast({
-            title: "Too many users being created.",
-            description:
-              "Log in with GitHub or retry " + dayjs(e.data.retryAt).fromNow(),
-          });
+          if (isRateLimitError(e)) {
+            toast({
+              title: "Too many users being created.",
+              description:
+                "Log in with GitHub or retry " +
+                dayjs(Date.now() + e.data.retryAfter).fromNow(),
+            });
+          }
         })
       }
     >
