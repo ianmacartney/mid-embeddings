@@ -8,13 +8,12 @@ import {
   getOneFrom,
   getOneFromOrThrow,
 } from "convex-helpers/server/relationships";
-import { asyncMap } from "convex-helpers";
+import { asyncMap, pick } from "convex-helpers";
 import {
   internalMutation,
   internalQuery,
   namespaceAdminAction,
   namespaceAdminMutation,
-  namespaceAdminQuery,
   namespaceUserAction,
   namespaceUserMutation,
   namespaceUserQuery,
@@ -77,14 +76,16 @@ export const upsertNamespace = userMutation({
   },
 });
 
-export const listRoundsByNamespace = namespaceAdminQuery({
+export const listRoundsByNamespace = namespaceUserQuery({
   args: {},
   handler: async (ctx) => {
-    return ctx.db
-      .query("rounds")
-      .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
-      .order("desc")
-      .take(20);
+    return (
+      await ctx.db
+        .query("rounds")
+        .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
+        .order("desc")
+        .take(20)
+    ).map((r) => omit(r, ["matches"]));
   },
 });
 
@@ -204,14 +205,18 @@ export const paginateText = namespaceUserQuery({
   },
 });
 
-export const listMidpoints = namespaceAdminQuery({
+export const listMidpoints = namespaceUserQuery({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
-    return ctx.db
+    const results = await ctx.db
       .query("midpoints")
       .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
       .order("desc")
       .paginate(args.paginationOpts);
+    return {
+      ...results,
+      page: results.page.map((m) => pick(m, ["_id", "left", "right"])),
+    };
   },
 });
 
