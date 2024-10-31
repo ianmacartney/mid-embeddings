@@ -1,4 +1,5 @@
 import { Flipboard } from "@/components/Flipboard";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { useAuthActions } from "@convex-dev/auth/react";
@@ -30,14 +31,33 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const round = useQuery(api.round.getActiveRound);
-  if (round && !round.ok) {
-    return <div>Error: {round.error}</div>;
+  const roundResult = useQuery(api.round.getActiveRound);
+  const [currentRound, setCurrentRound] = useState(roundResult?.value);
+  if (roundResult && !roundResult.ok) {
+    return <div>Error: {roundResult.error}</div>;
+  }
+  if (roundResult?.value && !currentRound) {
+    setCurrentRound(roundResult.value);
   }
   return (
     <div className="flex flex-col items-center min-h-screen h-full overflow-scroll bg-background text-foreground">
+      {roundResult?.value &&
+        currentRound &&
+        currentRound.roundId !== roundResult?.value.roundId && (
+          <div className="flex flex-row items-center justify-center gap-4 p-4">
+            <span>There is a new round available to play</span>
+            <Button
+              variant={"secondary"}
+              onClick={() => {
+                setCurrentRound(roundResult.value);
+              }}
+            >
+              Play the latest round
+            </Button>
+          </div>
+        )}
       <main className="flex flex-col items-center justify-center w-full max-w-4xl gap-8 px-6 py-8">
-        <Round round={round?.value} />
+        <Round round={currentRound ?? roundResult?.value} />
         <Unauthenticated>
           <LogInAnonymouslyByDefault />
         </Unauthenticated>
