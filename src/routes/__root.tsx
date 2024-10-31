@@ -13,7 +13,8 @@ import {
   ConvexReactClient,
   Unauthenticated,
 } from "convex/react";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import { Flipped, Flipper } from "react-flip-toolkit";
 
 const convex = new ConvexReactClient(
   import.meta.env.VITE_CONVEX_URL as string,
@@ -36,23 +37,85 @@ function App() {
   );
 }
 
+const titles = [
+  "Matching Madness",
+  "Mixed Matches",
+  "Mashed Meanings",
+  "Word Fusion Frenzy",
+  "Semantic Shuffle",
+  "Lexical Labyrinth",
+  "Verbal Vortex",
+  "Synonym Symphony",
+  "Wordplay Wizardry",
+  "Linguistic Limbo",
+  "Phrasal Fusion",
+  "Vocabulary Vortex",
+  "Diction Dimension",
+  "Terminology Tango",
+  "Etymological Enigma",
+];
 function Content() {
+  const [data, setData] = useState(titles[0]);
+  const [circleSwap, setCircleSwap] = useState(false);
+
+  useEffect(() => {
+    const circleInterval = setInterval(
+      () => setCircleSwap((circleSwap) => !circleSwap),
+      5000,
+    );
+    const titleInterval = setInterval(() => {
+      setData(titles[Math.floor(Math.random() * titles.length)]);
+    }, 7000);
+    return () => {
+      clearInterval(circleInterval);
+      clearInterval(titleInterval);
+    };
+  }, []);
   return (
     <div className="flex h-screen w-full flex-col">
       <header className="sticky top-0 z-10 flex min-h-20 border-b bg-background/80 backdrop-blur">
         <nav className="container w-full justify-between flex flex-row items-center gap-6">
           <div className="flex items-center gap-6 md:gap-10">
-            <Link to="/">
-              <h1 className="text-base font-semibold">Mid Embeddings</h1>
+            <Link className="flex items-center" to="/">
+              <Flipper flipKey={circleSwap}>
+                <div className="relative w-20 h-16">
+                  <Flipped flipId="circle1">
+                    <div
+                      className="absolute w-12 h-12 rounded-full bg-blue-500 opacity-50 transition-all duration-500 ease-in-out"
+                      style={{
+                        left: circleSwap ? "0" : "20px",
+                        top: "4px",
+                      }}
+                    ></div>
+                  </Flipped>
+                  <Flipped flipId="circle2">
+                    <div
+                      className="absolute w-12 h-12 rounded-full bg-red-500 opacity-50 transition-all duration-500 ease-in-out"
+                      style={{
+                        left: circleSwap ? "20px" : "0px",
+                        top: "4px",
+                      }}
+                    ></div>
+                  </Flipped>
+                </div>
+              </Flipper>
+              <h1 className="text-yellow-400 text-xl font-semibold">
+                <Flipper flipKey={data}>
+                  {data.split("").map((char, i) => {
+                    if (char === " ") {
+                      return <span key={char + i}>&nbsp;</span>;
+                    }
+                    return (
+                      <Flipped key={char + i} flipId={char}>
+                        <div className="text-yellow-400 inline-block">
+                          {char || ` `}
+                        </div>
+                      </Flipped>
+                    );
+                  })}
+                </Flipper>
+              </h1>
             </Link>
-            <div className="flex items-center gap-4 text-sm">
-              <Link
-                to="/author"
-                className="text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground"
-              >
-                Author your own
-              </Link>
-            </div>
           </div>
           <Unauthenticated>
             {/* TODO: make login a popover */}
@@ -81,6 +144,12 @@ function Content() {
             <FooterLink href="https://vitejs.dev">Vite</FooterLink>,{" "}
             <FooterLink href="https://react.dev/">React</FooterLink> and{" "}
             <FooterLink href="https://ui.shadcn.com/">shadcn/ui</FooterLink>.
+            <Link
+              to="/author"
+              className="p-2 text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground"
+            >
+              Author your own
+            </Link>
           </div>
         </div>
       </footer>
