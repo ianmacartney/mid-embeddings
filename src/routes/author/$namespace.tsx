@@ -305,13 +305,14 @@ function Namespace() {
             if (e.key === "Enter") {
               e.preventDefault();
               const value = e.currentTarget.value.trim();
+              const target = e.target as HTMLTextAreaElement;
               if (value.startsWith("https://")) {
                 toast({ title: "Adding text" });
                 convex
                   .action(fn.addText, { namespace, url: value })
                   .then(() => {
                     toast({ title: "Text added" });
-                    e.currentTarget.value = "";
+                    target.value = "";
                   })
                   .catch((e) => {
                     toast({
@@ -325,7 +326,6 @@ function Namespace() {
               e.currentTarget.blur();
               e.currentTarget.disabled = true;
               toast({ title: "Adding text" });
-              const target = e.target as HTMLTextAreaElement;
               Promise.all(
                 chunk(titled, 1000).map((chunk) =>
                   convex.action(fn.addText, { namespace, titled: chunk }),
