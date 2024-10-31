@@ -71,7 +71,7 @@ function Namespace() {
   const [guessResults, setGuessResults] = useState<
     FunctionReturnType<typeof fn.makeGuess>[]
   >([]);
-
+  const [misc, setMisc] = useState("");
   const [strategy, setStrategy] = useState<Strategy>("rank");
 
   return (
@@ -223,6 +223,20 @@ function Namespace() {
                 strategy={strategy}
               />
               <BasicSearch namespace={namespace} text={words.right} />
+            </div>
+            <div className="flex items-center flex-col gap-4">
+              <Input
+                type="text"
+                placeholder="Misc search"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    setMisc(e.currentTarget.value);
+                  }
+                }}
+                className="max-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <BasicSearch namespace={namespace} text={misc} />
             </div>
 
             <div className="flex justify-between gap-4">
