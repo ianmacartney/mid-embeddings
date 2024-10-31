@@ -1,8 +1,5 @@
-import { cn } from "@/lib/utils";
-import { FlapDisplay, Presets } from "react-split-flap-effect";
-import "react-split-flap-effect/extras/themes.css";
-import "./Flipboard.css";
 import { useMemo } from "react";
+import { Code } from "./Code";
 
 export const Flipboard = ({
   rank,
@@ -31,37 +28,8 @@ export const Flipboard = ({
 
   return (
     <div className="flex flex-row gap-4">
-      {rank && (
-        <FlapDisplay
-          id={`flipboard_rank_${value}`}
-          className={cn("M darkBordered", style)}
-          chars={Presets.ALPHANUM}
-          length={length || 2}
-          value={
-            rank !== undefined
-              ? `${rank < 10 ? `0${rank}` : rank.toString()}`
-              : "   "
-          }
-          padChar=" "
-        />
-      )}
-      <FlapDisplay
-        id={`flipboard_value_${value}`}
-        className={cn("M darkBordered", style)}
-        chars={Presets.ALPHANUM + "*?"}
-        length={length || 12}
-        value={obfuscate ? valueToDisplay.replace(/./g, "*") : valueToDisplay}
-      />
-      {(points || points === 0) && (
-        <FlapDisplay
-          id={`flipboard_points_${value}`}
-          className={cn("M darkBordered", style)}
-          chars={Presets.ALPHANUM + "+"}
-          length={4}
-          value={points <= 0 ? "FREE" : `${points?.toString()}`}
-          padChar="0"
-        />
-      )}
+      <Code>{rank}</Code>
+      <Code>{valueToDisplay}</Code>
     </div>
   );
 };
