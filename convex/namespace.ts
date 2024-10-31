@@ -274,7 +274,7 @@ export const midpointSearch = namespaceUserAction({
             existingEmbedding || (await embedWithCache(ctx, text));
           const results = await ctx.vectorSearch("embeddings", "embedding", {
             vector: embedding,
-            limit: 100,
+            limit: 102, // extra two to account for the left and right embeddings
             filter: (q) => q.eq("namespaceId", ctx.namespace._id),
           });
           return [embedding, results] as const;
@@ -381,15 +381,22 @@ export const upsertMidpoint = internalMutation({
     ),
   },
   handler: async (ctx, args) => {
-    const topMatches: Doc<"midpoints">["topMatches"] = await asyncMap(
-      args.topMatches,
-      async ({ embeddingId, ...rest }) => {
+    const topMatches: Doc<"midpoints">["topMatches"] = (
+      await asyncMap(args.topMatches, async ({ embeddingId, ...rest }) => {
         const text = await getOneFromOrThrow(
           ctx.db,
           "texts",
           "embeddingId",
           embeddingId,
         );
+        if (
+          text.text === args.left ||
+          text.text === args.right ||
+          text.title === args.left ||
+          text.title === args.right
+        ) {
+          return null;
+        }
         const embedding = await getOrThrow(ctx, embeddingId);
         const leftScore = dotProduct(args.leftEmbedding, embedding.embedding);
         const rightScore = dotProduct(args.rightEmbedding, embedding.embedding);
@@ -400,8 +407,8 @@ export const upsertMidpoint = internalMutation({
           rightScore,
           lxrScore: leftScore * rightScore,
         };
-      },
-    );
+      })
+    ).flatMap((m) => (m === null ? [] : [m]));
     const midpoint = await ctx.db
       .query("midpoints")
       .withIndex("namespaceId", (q) =>
