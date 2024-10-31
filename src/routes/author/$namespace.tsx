@@ -158,10 +158,6 @@ function Namespace() {
                       e.preventDefault();
                       const guess = e.currentTarget.value;
                       e.currentTarget.value = "";
-                      if (guessResults.some((r) => r.guess === guess)) {
-                        toast({ title: "Guess already made" });
-                        return;
-                      }
                       convex
                         .action(fn.makeGuess, {
                           ...words,
@@ -170,7 +166,10 @@ function Namespace() {
                           strategy,
                         })
                         .then((results) =>
-                          setGuessResults((arr) => [...arr, results]),
+                          setGuessResults((arr) => [
+                            ...arr.filter((g) => g.guess !== guess),
+                            results,
+                          ]),
                         )
                         .catch((e) => {
                           e.currentTarget.value = guess;
