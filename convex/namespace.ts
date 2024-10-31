@@ -16,6 +16,7 @@ import {
   namespaceAdminMutation,
   namespaceAdminQuery,
   namespaceUserAction,
+  namespaceUserMutation,
   namespaceUserQuery,
   userMutation,
   userQuery,
@@ -84,6 +85,23 @@ export const listRoundsByNamespace = namespaceAdminQuery({
       .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
       .order("desc")
       .take(20);
+  },
+});
+
+export const randomTitle = namespaceUserMutation({
+  args: {},
+  handler: async (ctx) => {
+    // generate a string with four random a-z characters
+    const randomString = Array.from({ length: 4 }, () =>
+      String.fromCharCode(97 + (Math.floor(Date.now()) % 26)),
+    ).join("");
+    const results = await ctx.db
+      .query("texts")
+      .withIndex("namespaceId", (q) =>
+        q.eq("namespaceId", ctx.namespace._id).gte("title", randomString),
+      )
+      .first();
+    return results?.title ?? "";
   },
 });
 

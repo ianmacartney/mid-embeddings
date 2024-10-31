@@ -38,6 +38,19 @@ function Namespace() {
   const convex = useConvex();
   const updateNamespace = useMutation(fn.update);
   const rounds = useQuery(fn.listRoundsByNamespace, { namespace }) ?? [];
+  const [leftRandomText, setLeftRandomText] = useState("");
+  const [rightRandomText, setRightRandomText] = useState("");
+  useEffect(() => {
+    const id = setInterval(() => {
+      void convex
+        .mutation(fn.randomTitle, { namespace })
+        .then(setLeftRandomText);
+      void convex
+        .mutation(fn.randomTitle, { namespace })
+        .then(setRightRandomText);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [namespace, convex]);
   const midpoints = usePaginatedQuery(
     fn.listMidpoints,
     { namespace },
@@ -126,7 +139,7 @@ function Namespace() {
             <div className="flex gap-4">
               <Input
                 type="text"
-                placeholder="Left"
+                placeholder={leftRandomText || "Left"}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     const left = e.currentTarget.value;
@@ -190,7 +203,7 @@ function Namespace() {
               </div>
               <Input
                 type="text"
-                placeholder="Right"
+                placeholder={rightRandomText || "Right"}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
