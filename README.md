@@ -59,3 +59,12 @@ https://gist.githubusercontent.com/ianmacartney/97bea1a523b39a35dfa9455c2ee1bfb9
 The same, with at least 4 characters:
 
 https://gist.githubusercontent.com/ianmacartney/a6ae8e5bb6e8b27fa3f98b54b2c0690e/raw/1946ad45d96380a3a8e39db6d681e483042716ed/10k-words-no-swears-min-length-4.json
+
+Words from Google's 10k most common words, de-duping on stemmed words,
+without swears, at least 3 characters:
+
+https://gist.githubusercontent.com/ianmacartney/d4f664d3f8e63845a77f519f2709ab05/raw/d2508f553b42444589d5ecc134b8a3c91b2a5b2a/google-10000-english-usa-no-swears-stemmed-min-3-chars.json
+
+Another great resource:
+
+https://github.com/first20hours/google-10000-english
