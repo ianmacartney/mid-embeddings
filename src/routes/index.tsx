@@ -209,7 +209,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
         </div>
         <div className="flex flex-row gap-4 w-full">
           <div className="w-1/2">
-            <div className="bg-slate-900 flex flex-col gap-6 py-6 px-4">
+            <div className="bg-card flex flex-col gap-6 py-6 px-4">
               <div className="text-2xl text-slate-600 uppercase">
                 Let's Play
               </div>
@@ -233,7 +233,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
           </div>
 
           <div className="w-1/2 flex flex-col gap-4">
-            <div className="bg-slate-900 flex flex-col gap-6 py-6 px-6">
+            <div className="bg-card flex flex-col gap-6 py-6 px-6">
               <div className="text-2xl text-slate-600 uppercase">
                 Matching Words
               </div>
@@ -255,7 +255,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
           </div>
         </div>
         <div className="flex flex-row gap-4 w-full">
-          <div className="bg-slate-900 flex flex-col gap-6 py-6 px-4 w-3/4">
+          <div className="bg-card flex flex-col gap-6 py-6 px-4 w-3/4">
             <div className="text-2xl text-slate-600 uppercase">Your stats</div>
             <div className="flex flex-row justify-start items-start">
               <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/3">
@@ -266,7 +266,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   <div className="text-5xl font-bold-TOM">#1</div>
                 </div>
                 <div className="flex flex-row place-self-start">
-                  <div className="text-3xl text-white">your rank</div>
+                  <div className="text-3xl text-card-foreground">your rank</div>
                 </div>
               </div>
               <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/3">
@@ -277,7 +277,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   <div className="text-5xl font-bold-TOM">100</div>
                 </div>
                 <div className="flex flex-row place-self-start">
-                  <div className="text-3xl text-white">coins</div>
+                  <div className="text-3xl text-card-foreground">coins</div>
                 </div>
               </div>
               <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/3">
@@ -288,7 +288,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   <div className="text-5xl font-bold-TOM">0</div>
                 </div>
                 <div className="flex flex-row place-self-start">
-                  <div className="text-3xl text-white">words</div>
+                  <div className="text-3xl text-card-foreground">words</div>
                 </div>
               </div>
             </div>
