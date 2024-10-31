@@ -1,18 +1,20 @@
+import { Flipboard } from "@/components/Flipboard";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { isRateLimitError } from "@convex-dev/ratelimiter";
+import { api } from "@convex/_generated/api";
+import { Id } from "@convex/_generated/dataModel";
+import { RoundInfo } from "@convex/round";
 import { createFileRoute } from "@tanstack/react-router";
-import { SignInForm } from "@/SignInForm";
 import {
-  Authenticated,
   Unauthenticated,
   useConvex,
   useConvexAuth,
   useQuery,
 } from "convex/react";
-import { useEffect, useState } from "react";
-import { Flipboard } from "@/components/Flipboard";
-import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/use-toast";
-import { api } from "@convex/_generated/api";
-import { Id } from "@convex/_generated/dataModel";
+import { ConvexError } from "convex/values";
+import dayjs from "dayjs";
 import {
   Coins,
   CornerDownRight,
@@ -20,11 +22,8 @@ import {
   LetterText,
   Trophy,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Flipped, Flipper } from "react-flip-toolkit";
-import { RoundInfo } from "@convex/round";
-import { useAuthActions } from "@convex-dev/auth/react";
-import { isRateLimitError } from "@convex-dev/ratelimiter";
-import dayjs from "dayjs";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -107,7 +106,18 @@ function Round({ round }: { round: RoundInfo | undefined }) {
 
   const makeGuess = () => {
     if (!round) {
-      throw new Error("Can't guess: round not found");
+      toast({
+        title: "Error making guess",
+        description: "Round not found",
+      });
+      return;
+    }
+    if (!isAuthenticated) {
+      toast({
+        title: "Error making guess",
+        description: "Not logged in.",
+      });
+      return;
     }
     if (guesses?.some((r) => r.text === guess)) {
       toast({ title: "Guess already made" });
@@ -119,10 +129,14 @@ function Round({ round }: { round: RoundInfo | undefined }) {
         text: guess,
       })
       .catch((e) => {
-        e.currentTarget.value = guess;
+        setGuess(guess);
+        const description =
+          e instanceof ConvexError
+            ? e.data
+            : "Something went wrong. Try refreshing your browser.";
         toast({
           title: "Error making guess",
-          description: e.message,
+          description,
         });
       });
     setGuess("");

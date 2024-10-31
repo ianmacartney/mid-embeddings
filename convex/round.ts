@@ -1,7 +1,7 @@
 import { ShardedCounter } from "@convex-dev/sharded-counter";
 import { asyncMap, nullThrows, pick } from "convex-helpers";
 import { getManyFrom, getOrThrow } from "convex-helpers/server/relationships";
-import { Infer } from "convex/values";
+import { ConvexError, Infer } from "convex/values";
 import { components, internal } from "./_generated/api";
 import { embedWithCache } from "./embed";
 import {
@@ -93,8 +93,7 @@ export const makeGuess = userAction({
   handler: async (ctx, args) => {
     const userId = ctx.userId;
     if (!userId) {
-      console.error("Not authenticated");
-      return;
+      throw new ConvexError("Not logged in.");
     }
     const embedding = await embedWithCache(ctx, args.text);
     await ctx.runMutation(internal.round.insertGuess, {
