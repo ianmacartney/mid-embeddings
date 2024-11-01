@@ -23,10 +23,6 @@ const counter = new ShardedCounter(components.shardedCounter, {
     "guesses:total": 50,
   },
 });
-// For user-specific counters, we don't need to shard.
-const userCounter = new ShardedCounter(components.shardedCounter, {
-  defaultShards: 1,
-});
 
 const roundValidator = v.object({
   roundId: v.id("rounds"),
@@ -222,7 +218,6 @@ export const insertGuess = internalMutation({
     await counter.add(ctx, "guesses:total");
     await counter.add(ctx, `guesses:${args.roundId}`);
     await counter.add(ctx, `guesses:${round.namespaceId}`);
-    await userCounter.add(ctx, `guesses:${args.userId}`);
   },
 });
 
@@ -247,7 +242,6 @@ export const addOldGuesses = migrations.define({
     await counter.add(ctx, "guesses:total");
     await counter.add(ctx, `guesses:${doc.roundId}`);
     await counter.add(ctx, `guesses:${round.namespaceId}`);
-    await userCounter.add(ctx, `guesses:${doc.userId}`);
   },
 });
 export const backfill = migrations.runner(internal.round.addOldGuesses);
