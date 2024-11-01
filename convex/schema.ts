@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
+import { pretendRequired } from "convex-helpers/validators";
 
 // The schema is normally optional, but Convex Auth
 // requires indexes defined on `authTables`.
@@ -12,12 +13,14 @@ const schema = defineSchema({
     v.union(
       v.object({
         isAnonymous: v.literal(true),
+        score: pretendRequired(v.number()),
       }),
       v.object({
         isAnonymous: v.literal(false),
         name: v.string(),
         email: v.string(),
         image: v.string(),
+        score: pretendRequired(v.number()),
       }),
     ),
   ),

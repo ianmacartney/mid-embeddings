@@ -27,7 +27,7 @@ import type {
   TableNamesInDataModel,
 } from "convex/server";
 import schema from "./schema";
-import { getOneFrom } from "convex-helpers/server/relationships";
+import { getOneFrom, getOrThrow } from "convex-helpers/server/relationships";
 import { Triggers } from "convex-helpers/server/triggers";
 import { TableAggregate } from "@convex-dev/aggregate";
 
@@ -48,14 +48,27 @@ triggers.register("guesses", roundLeaderboard.idempotentTrigger());
 export const globalLeaderboard = new TableAggregate<
   [number, number],
   DataModel,
-  "guesses"
+  "users"
 >(components.globalLeaderboard, {
-  // Sort by score, then by submission time (newest first)
-  // So we can find the first submission with the highest score for a given round.
-  sortKey: (d) => [d.score, -(d.submittedAt ?? Infinity)],
-  sumValue: (d) => d.score,
+  // Sort by score, then by creation time (newest first)
+  // So we can find the earliest adopter with the highest score.
+  sortKey: (d) => [d.isAnonymous ? 0 : d.score ?? 0, -d._creationTime],
+  sumValue: (d) => d.score ?? 0,
 });
-triggers.register("guesses", globalLeaderboard.idempotentTrigger());
+triggers.register("users", globalLeaderboard.idempotentTrigger());
+
+triggers.register("guesses", async (ctx, event) => {
+  const delta = (event.newDoc?.score ?? 0) - (event.oldDoc?.score ?? 0);
+  if (delta === 0) {
+    return;
+  }
+  const userId = event.newDoc?.userId;
+  if (!userId) {
+    return;
+  }
+  const user = await getOrThrow(ctx, userId);
+  await ctx.db.patch(userId, { score: (user.score ?? 0) + delta });
+});
 
 export const mutation = customMutation(mutationRaw, customCtx(triggers.wrapDB));
 export const internalMutation = customMutation(

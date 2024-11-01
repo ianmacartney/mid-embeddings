@@ -148,6 +148,7 @@ function GuessInput({ round }: { round?: RoundInfo }) {
 }
 
 function Round({ round }: { round: RoundInfo | undefined }) {
+  const overallStats = useQuery(api.users.overallStats);
   return (
     <div className="flex flex-col items-center justify-center min-h-screen h-full overflow-scroll bg-background text-foreground">
       <main className="flex flex-col items-start justify-center w-full max-w-5xl gap-4 px-6 py-8">
@@ -174,7 +175,9 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
                     <Earth size={36} strokeWidth={2} />
                   </span>{" "}
-                  <div className="text-5xl font-bold-TOM">#1</div>
+                  <div className="text-5xl font-bold-TOM">
+                    #{overallStats?.rank ?? "?"}
+                  </div>
                 </div>
                 <div className="flex flex-row place-self-start">
                   <div className="text-3xl text-card-foreground">your rank</div>

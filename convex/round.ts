@@ -79,20 +79,22 @@ export const myRank = userQuery({
     if (!userId) {
       return -1;
     }
-    const bestGuess = await ctx.db
+    const guess = await ctx.db
       .query("guesses")
       .withIndex("userId", (q) =>
         q.eq("userId", userId).eq("roundId", args.roundId),
       )
       .first();
-    if (!bestGuess) {
-      return -1;
+    if (!guess) {
+      return Infinity;
     }
-    return roundLeaderboard.offsetOf(
-      ctx,
-      [args.roundId, bestGuess.score, bestGuess.submittedAt ?? Infinity],
-      bestGuess._id,
-      { prefix: [args.roundId] },
+    return (
+      (await roundLeaderboard.offsetOf(
+        ctx,
+        [args.roundId, guess.score, guess.submittedAt ?? Infinity],
+        guess._id,
+        { prefix: [args.roundId] },
+      )) + 1
     );
   },
 });

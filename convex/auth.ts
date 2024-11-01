@@ -30,6 +30,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
         name: args.profile.name,
         email: args.profile.email,
         image: args.profile.image,
+        score: 0,
       });
     },
   },
