@@ -234,12 +234,14 @@ export const insertGuess = internalMutation({
       throw new ConvexError("Round is not active.");
     }
 
-    const index = round.matches.slice(0, NUM_MATCHES).indexOf(args.embeddingId);
+    const index = round.matches.indexOf(args.embeddingId);
     const rank = index === -1 ? undefined : index;
     const attempt = { title: args.title, rank };
     let score = guess?.score ?? 0;
+    const points =
+      rank !== undefined && rank < NUM_MATCHES ? NUM_MATCHES - rank : 0;
     if (rank !== undefined) {
-      score += NUM_MATCHES - rank;
+      score += points;
     }
     if (guess) {
       if (
@@ -253,7 +255,7 @@ export const insertGuess = internalMutation({
       if (guess.attempts.length >= MAX_ATTEMPTS) {
         throw new ConvexError("Max attempts reached.");
       }
-      const matched = guess.attempts.filter((t) => t.rank !== undefined).length;
+      const matched = guess.attempts.filter((t) => (t.points ?? 0) > 0).length;
       if (NUM_MATCHES === matched) {
         throw new ConvexError("All matches already guessed.");
       }

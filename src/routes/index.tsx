@@ -262,11 +262,11 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
     .slice(0, MAX_ATTEMPTS)
     .map((r, i) => ({
       ...r,
-      score: r.rank === undefined ? 0 : NUM_MATCHES - r.rank,
+      points: r.points ?? 0,
       index: i,
     }))
     .sort((a, b) =>
-      a.score !== b.score ? b.score - a.score : a.index - b.index,
+      a.points !== b.points ? b.points - a.points : a.index - b.index,
     );
   const myRank = useQuery(api.round.myRank, { roundId: guesses.roundId });
   return (
@@ -310,42 +310,42 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
           </span>{" "}
           {showLeaderboard ? "Top 10" : `Score: `}
         </div> */}
-        <div className="flex flex-col gap-3 text-xl text-yellow-400">
-          <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
-            <div>Word</div>
-            <div>Points</div>
-          </div>
+      <div className="flex flex-col gap-3 text-xl text-yellow-400">
+        <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
+          <div>Word</div>
+          <div>Points</div>
+        </div>
 
-          {ranked.map((result) => {
-            //const [left, right] = getLR(result);
-            return (
-              <div
-                key={result.title}
-                className={cn(
-                  "flex flex-row justify-between text-primary",
-                  result.score > 0 && "text-green-500",
-                )}
-              >
-                <Code>
-                  <span className="text-xl">{result.title}</span>
-                </Code>
-                <Code>
-                  <span className="text-xl">{result.score}</span>
-                </Code>
-              </div>
-            );
-          })}
-          {!guesses.submittedAt && (
-            <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
-              <div>
-                {ranked.length === MAX_ATTEMPTS - 1
-                  ? "Guess left"
-                  : "Guesses left"}
-                : {MAX_ATTEMPTS - guesses.attempts.length}
-              </div>
+        {ranked.map((result) => {
+          //const [left, right] = getLR(result);
+          return (
+            <div
+              key={result.title}
+              className={cn(
+                "flex flex-row justify-between text-primary",
+                result.points > 0 && "text-green-500",
+              )}
+            >
+              <Code>
+                <span className="text-xl">{result.title}</span>
+              </Code>
+              <Code>
+                <span className="text-xl">{result.points}</span>
+              </Code>
             </div>
-          )}
-          {/* {Array.from({
+          );
+        })}
+        {!guesses.submittedAt && (
+          <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
+            <div>
+              {ranked.length === MAX_ATTEMPTS - 1
+                ? "Guess left"
+                : "Guesses left"}
+              : {MAX_ATTEMPTS - guesses.attempts.length}
+            </div>
+          </div>
+        )}
+        {/* {Array.from({
           length: MAX_ATTEMPTS - (guesses?.attempts.length || 0),
         }).map((_, i) => (
           <div key={i} className="flex flex-row justify-between">
