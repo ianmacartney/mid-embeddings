@@ -195,7 +195,7 @@ function GlobalLeaderboard() {
                   <span className="text-xl">{user.name}</span>
                 </Code>
                 <Code className="ml-auto">
-                  <span className="text-xl">{user.score || "-"}</span>
+                  <span className="text-xl">{user.score}</span>
                 </Code>
               </div>
             );
@@ -244,7 +244,7 @@ function RoundLeaderboard({ round }: { round: RoundInfo }) {
                   <span className="text-xl">{user.name}</span>
                 </Code>
                 <Code className="ml-auto">
-                  <span className="text-xl">{user.score || "-"}</span>
+                  <span className="text-xl">{user.score}</span>
                 </Code>
               </div>
             );
@@ -347,7 +347,7 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
                   <span className="text-xl">{result.title}</span>
                 </Code>
                 <Code>
-                  <span className="text-xl">{result.score || "-"}</span>
+                  <span className="text-xl">{result.score}</span>
                 </Code>
               </div>
             );
