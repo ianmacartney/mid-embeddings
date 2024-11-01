@@ -191,23 +191,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
 
           <div className="w-1/2 flex flex-col gap-4">
             <div className="bg-card flex flex-col gap-6 py-6 px-6">
-              <div className="text-2xl text-slate-600 uppercase">
-                Matching Words
-              </div>
-              <div className="text-5xl font-bold-TOM text-yellow-400 flex flex-row items-end gap-4">
-                <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-                  <Trophy size={36} strokeWidth={2} />
-                </span>{" "}
-                TOP 10
-              </div>
-              <div className="flex flex-col gap-3 text-xl text-yellow-400">
-                <div className="flex flex-row gap-3 text-xl text-yellow-400">
-                  <div className="w-[45px]">RANK</div>
-                  <div className="w-[350px]">WORD</div>
-                </div>
-
-                {round && <Guesses roundId={round.roundId} randomize={false} />}
-              </div>
+              {round && <Guesses roundId={round.roundId} />}
             </div>
           </div>
         </div>
@@ -256,37 +240,88 @@ function Round({ round }: { round: RoundInfo | undefined }) {
   );
 }
 
-function Guesses({
-  roundId,
-  randomize,
-}: {
-  roundId: Id<"rounds">;
-  randomize: boolean;
-}) {
+function Guesses({ roundId }: { roundId: Id<"rounds"> }) {
   const guesses = useQuery(api.round.listGuesses, { roundId });
 
   const ranked = (guesses?.attempts ?? [])
     .slice(0, MAX_ATTEMPTS)
-    .map((r) => ({
+    .map((r, i) => ({
       ...r,
       score: r.rank === undefined ? 0 : NUM_MATCHES - r.rank,
+      index: i,
     }))
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) =>
+      a.score !== b.score ? b.score - a.score : a.index - b.index,
+    );
+  const showLeaderboard = !guesses?.attempts.length;
   return (
     <>
-      {ranked.map((result) => {
-        //const [left, right] = getLR(result);
-        return (
-          <div className="flex flex-row gap-4">
+      <div className="text-2xl text-slate-600 uppercase">
+        {showLeaderboard ? "Global Leaderboard" : "Your Guesses"}
+      </div>
+      <div className="text-5xl font-bold-TOM text-yellow-400 flex flex-row items-end gap-4 ">
+        <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
+          {showLeaderboard ? (
+            <Trophy size={36} strokeWidth={2} />
+          ) : (
+            <Coins size={36} strokeWidth={2} />
+          )}
+        </span>{" "}
+        {showLeaderboard ? "Top 10" : `Score: ${guesses?.score}`}
+      </div>
+      <div className="flex flex-col gap-3 text-xl text-yellow-400">
+        <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
+          {showLeaderboard ? (
+            <>
+              <div>User</div>
+              <div>Score</div>
+            </>
+          ) : (
+            <>
+              <div>Word</div>
+              <div>Score</div>
+            </>
+          )}
+        </div>
+
+        {ranked.map((result) => {
+          //const [left, right] = getLR(result);
+          return (
+            <div className="flex flex-row justify-between text-primary">
+              <Code>
+                <span className="text-xl">{result.title}</span>
+              </Code>
+              <Code>
+                <span className="text-xl">{result.score || "-"}</span>
+              </Code>
+            </div>
+          );
+        })}
+        <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
+          <div>
+            Guesses Left: {MAX_ATTEMPTS - (guesses?.attempts.length || 0)}
+          </div>
+        </div>
+        {/* {Array.from({
+          length: MAX_ATTEMPTS - (guesses?.attempts.length || 0),
+        }).map(() => (
+          <div className="flex flex-row justify-between">
             <Code>
-              <span className="text-xl">{result.score || "-"}</span>
-            </Code>
-            <Code>
-              <span className="text-xl">{result.title}</span>
+              <span className="text-xl">{"-"}</span>
             </Code>
           </div>
-        );
-      })}
+        ))} */}
+        {/* {!!guesses?.score && (
+          <div className="flex self-end flex-col">
+            <div className="text-xl">TOTAL</div>
+            <div className="flex self-end">
+              <Code>
+                <span className="text-xl">{guesses?.score || "-"}</span>
+              </Code>
+            </div>
+          </div>
+        )} */}
+      </div>
     </>
   );
 }
