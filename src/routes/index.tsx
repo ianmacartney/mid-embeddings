@@ -158,46 +158,16 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                 How to play
               </div>
               <div className="text-3xl">
-                Guess the word that best matches the two words, according to AI
-                embeddings. Bonus points for finding all 5 target words.
+                Guess the words that match the two target words, according to AI
+                embeddings. Bonus points for finding all {NUM_MATCHES} target
+                words.
               </div>
             </div>
           </div>
         </div>
         <div className="flex flex-row gap-4 w-full">
-          <div className="w-1/2">
-            <div className="bg-card flex flex-col gap-6 py-6 px-4">
-              <div className="text-2xl text-slate-600 uppercase">
-                Let's Play
-              </div>
-              <div className="text-5xl text-yellow-400 flex flex-row items-end gap-4 pb-4">
-                <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-                  <Coins size={36} strokeWidth={2} />
-                </span>{" "}
-                Round #1
-              </div>
-              <div className="flex flex-col items-start w-full gap-2 font-bold">
-                <div className="flex flex-col items-start gap-4">
-                  <div className="text-5xl">{round?.left}</div>
-                  <div className="text-5xl opacity-30">+</div>
-                  <div className="text-5xl">{round?.right}</div>
-                  <div className="text-5xl opacity-30">=</div>
-
-                  <GuessInput round={round} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="w-1/2 flex flex-col gap-4">
-            <div className="bg-card flex flex-col gap-6 py-6 px-6">
-              {round && <Guesses roundId={round.roundId} />}
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-row gap-4 w-full">
-          <div className="bg-card flex flex-col gap-6 py-6 px-4 w-3/4">
-            <div className="text-2xl text-slate-600 uppercase">Your stats</div>
+          <div className="bg-card flex flex-col gap-6 py-6 px-4 w-full">
+            <div className="text-2xl text-slate-600 uppercase">Stats</div>
             <div className="flex flex-row justify-start items-start">
               <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/3">
                 <div className="flex flex-row items-end gap-4">
@@ -232,6 +202,37 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   <div className="text-3xl text-card-foreground">words</div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-row gap-4 w-full">
+          <div className="w-1/2">
+            <div className="bg-card flex flex-col gap-6 py-6 px-4">
+              <div className="text-2xl text-slate-600 uppercase">
+                Let's Play
+              </div>
+              <div className="text-5xl text-yellow-400 flex flex-row items-end gap-4 pb-4">
+                <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
+                  <LetterText size={36} strokeWidth={2} />
+                </span>{" "}
+                Round #1
+              </div>
+              <div className="flex flex-col items-start w-full gap-2 font-bold">
+                <div className="flex flex-col items-start gap-4">
+                  <div className="text-5xl">{round?.left}</div>
+                  <div className="text-5xl opacity-30">+</div>
+                  <div className="text-5xl">{round?.right}</div>
+                  <div className="text-5xl opacity-30">=</div>
+
+                  <GuessInput round={round} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-1/2 flex flex-col gap-4">
+            <div className="bg-card flex flex-col gap-6 py-6 px-6">
+              {round && <Guesses roundId={round.roundId} />}
             </div>
           </div>
         </div>
