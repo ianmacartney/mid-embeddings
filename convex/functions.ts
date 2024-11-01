@@ -43,7 +43,7 @@ export const roundLeaderboard = new TableAggregate<
   sortKey: (d) => [d.roundId, d.score, -(d.submittedAt ?? Infinity)],
   sumValue: (d) => d.score,
 });
-triggers.register("guesses", roundLeaderboard.trigger());
+triggers.register("guesses", roundLeaderboard.idempotentTrigger());
 
 export const globalLeaderboard = new TableAggregate<
   [number, number],
@@ -55,7 +55,7 @@ export const globalLeaderboard = new TableAggregate<
   sortKey: (d) => [d.score, -(d.submittedAt ?? Infinity)],
   sumValue: (d) => d.score,
 });
-triggers.register("guesses", globalLeaderboard.trigger());
+triggers.register("guesses", globalLeaderboard.idempotentTrigger());
 
 export const mutation = customMutation(mutationRaw, customCtx(triggers.wrapDB));
 export const internalMutation = customMutation(
