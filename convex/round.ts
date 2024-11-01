@@ -220,6 +220,9 @@ export const insertGuess = internalMutation({
     embeddingId: v.id("embeddings"),
   },
   handler: async (ctx, args) => {
+    if (args.title.trim().length === 0) {
+      throw new ConvexError("Guess cannot be empty.");
+    }
     const guess = await ctx.db
       .query("guesses")
       .withIndex("userId", (q) =>
