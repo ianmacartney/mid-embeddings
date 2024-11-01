@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { api } from "@convex/_generated/api";
@@ -6,7 +5,7 @@ import { RoundInfo } from "@convex/round";
 import { useConvex, useConvexAuth, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import { CornerDownRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export function GuessInput({ round }: { round?: RoundInfo }) {
   const convex = useConvex();
@@ -17,6 +16,7 @@ export function GuessInput({ round }: { round?: RoundInfo }) {
   );
   const [guess, setGuess] = useState("");
   const [guessing, setGuessing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const makeGuess = () => {
     if (!round) {
       toast({
@@ -60,6 +60,9 @@ export function GuessInput({ round }: { round?: RoundInfo }) {
       })
       .finally(() => {
         setGuessing(false);
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 0);
       });
   };
   const hint = "Enter a word whose meaning matches the other two words.";
@@ -69,6 +72,7 @@ export function GuessInput({ round }: { round?: RoundInfo }) {
         {hint}
       </label>
       <Input
+        ref={inputRef}
         id="guess-input"
         type="text"
         title={hint}
