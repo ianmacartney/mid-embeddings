@@ -274,37 +274,17 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
       <div className="bg-card flex flex-col gap-6 py-6 px-4 w-full">
         <div className="text-2xl text-slate-600 uppercase">Stats</div>
         <div className="flex flex-row justify-start items-start">
-          {guesses.submittedAt ? (
-            <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
-              <div className="flex flex-row items-end gap-4">
-                <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-                  <Award size={36} strokeWidth={2} />
-                </span>{" "}
-                <div className="text-5xl font-bold-TOM">#{myRank ?? "?"}</div>
-              </div>
-              <div className="flex flex-row place-self-start">
-                <div className="text-3xl text-card-foreground">your rank</div>
-              </div>
+          <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
+            <div className="flex flex-row items-end gap-4">
+              <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
+                <Award size={36} strokeWidth={2} />
+              </span>{" "}
+              <div className="text-5xl font-bold-TOM">#{myRank ?? "?"}</div>
             </div>
-          ) : (
-            <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
-              <div className="flex flex-row items-end gap-4">
-                <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-                  <Hash size={36} strokeWidth={2} />
-                </span>{" "}
-                <div className="text-5xl font-bold-TOM">
-                  {MAX_ATTEMPTS - ranked.length}
-                </div>
-              </div>
-              <div className="flex flex-row place-self-start">
-                <div className="text-3xl text-card-foreground">
-                  {ranked.length === MAX_ATTEMPTS - 1
-                    ? "guess left"
-                    : "guesses left"}
-                </div>
-              </div>
+            <div className="flex flex-row place-self-start">
+              <div className="text-3xl text-card-foreground">your rank</div>
             </div>
-          )}
+          </div>
           <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
             <div className="flex flex-row items-end gap-4">
               <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
@@ -333,7 +313,7 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
         <div className="flex flex-col gap-3 text-xl text-yellow-400">
           <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
             <div>Word</div>
-            <div>Score</div>
+            <div>Points</div>
           </div>
 
           {ranked.map((result) => {
@@ -352,13 +332,16 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
               </div>
             );
           })}
-          {/* <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
-            <div>
-              {guesses.submittedAt
-                ? `Submitted at ${dayjs(guesses.submittedAt).format("h:mm A")}`
-                : `Guesses Left: ${MAX_ATTEMPTS - guesses.attempts.length}`}
+          {!guesses.submittedAt && (
+            <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
+              <div>
+                {ranked.length === MAX_ATTEMPTS - 1
+                  ? "Guess left"
+                  : "Guesses left"}
+                : {MAX_ATTEMPTS - guesses.attempts.length}
+              </div>
             </div>
-          </div> */}
+          )}
           {/* {Array.from({
           length: MAX_ATTEMPTS - (guesses?.attempts.length || 0),
         }).map((_, i) => (
