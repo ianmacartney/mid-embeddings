@@ -52,7 +52,10 @@ export const globalLeaderboard = new TableAggregate<
 >(components.globalLeaderboard, {
   // Sort by score, then by creation time (newest first)
   // So we can find the earliest adopter with the highest score.
-  sortKey: (d) => [d.isAnonymous ? 0 : d.score ?? 0, -d._creationTime],
+  sortKey: (d) => [
+    d.isAnonymous ? d.score / 1000 : d.score ?? 0,
+    -d._creationTime,
+  ],
   sumValue: (d) => d.score ?? 0,
 });
 triggers.register("users", globalLeaderboard.idempotentTrigger());
