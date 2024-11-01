@@ -104,7 +104,10 @@ function Round({ round }: { round: RoundInfo | undefined }) {
 
           <div className="w-1/2 flex flex-col gap-4">
             {guesses ? (
-              <Guesses guesses={guesses} />
+              <>
+                <RoundStats guesses={guesses} />
+                <Guesses guesses={guesses} />
+              </>
             ) : (
               <>
                 <GlobalStats />
@@ -257,6 +260,47 @@ function RoundLeaderboard({ round }: { round: RoundInfo }) {
   );
 }
 
+function RoundStats({ guesses }: { guesses: Doc<"guesses"> }) {
+  const myRank = useQuery(api.round.myRank, { roundId: guesses.roundId });
+  const viewer = useQuery(api.users.viewer);
+  return (
+    <div className="bg-card flex flex-col gap-6 py-6 px-4 w-full">
+      <div className="text-2xl text-slate-600 uppercase">Stats</div>
+      <div className="flex flex-row justify-start items-start">
+        <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
+          <div className="flex flex-row items-end gap-4">
+            <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
+              <Award size={36} strokeWidth={2} />
+            </span>{" "}
+            <div className="text-5xl font-bold-TOM">#{myRank ?? "?"}</div>
+          </div>
+          <div className="flex flex-row place-self-start">
+            <div className="text-3xl text-card-foreground">your rank</div>
+          </div>
+        </div>
+        <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
+          <div className="flex flex-row items-end gap-4">
+            <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
+              <Gem size={36} strokeWidth={2} />
+            </span>{" "}
+            <div className="text-5xl font-bold-TOM">{guesses.score}</div>
+          </div>
+          <div className="flex flex-row place-self-start">
+            <div className="text-3xl text-card-foreground">score</div>
+          </div>
+        </div>
+      </div>
+      {(!viewer || viewer.score < 10) && (
+        <div className="font-bold-TOM text-slate-600">
+          There are {NUM_MATCHES} target words to guess. If you guess the first
+          word correctly, you get {NUM_MATCHES} points. If you guess the second
+          word correctly, you get {NUM_MATCHES - 1} points. And so on.
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
   const ranked = (guesses?.attempts ?? [])
     .slice(0, MAX_ATTEMPTS)
@@ -268,39 +312,10 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
     .sort((a, b) =>
       a.points !== b.points ? b.points - a.points : a.index - b.index,
     );
-  const myRank = useQuery(api.round.myRank, { roundId: guesses.roundId });
   return (
-    <>
-      <div className="bg-card flex flex-col gap-6 py-6 px-4 w-full">
-        <div className="text-2xl text-slate-600 uppercase">Stats</div>
-        <div className="flex flex-row justify-start items-start">
-          <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
-            <div className="flex flex-row items-end gap-4">
-              <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-                <Award size={36} strokeWidth={2} />
-              </span>{" "}
-              <div className="text-5xl font-bold-TOM">#{myRank ?? "?"}</div>
-            </div>
-            <div className="flex flex-row place-self-start">
-              <div className="text-3xl text-card-foreground">your rank</div>
-            </div>
-          </div>
-          <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
-            <div className="flex flex-row items-end gap-4">
-              <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-                <Gem size={36} strokeWidth={2} />
-              </span>{" "}
-              <div className="text-5xl font-bold-TOM">{guesses.score}</div>
-            </div>
-            <div className="flex flex-row place-self-start">
-              <div className="text-3xl text-card-foreground">score</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="bg-card flex flex-col gap-6 py-6 px-6">
-        <div className="text-2xl text-slate-600 uppercase">Your Guesses</div>
-        {/* <div className="text-5xl font-bold-TOM text-yellow-400 flex flex-row items-end gap-4 ">
+    <div className="bg-card flex flex-col gap-6 py-6 px-6">
+      <div className="text-2xl text-slate-600 uppercase">Your Guesses</div>
+      {/* <div className="text-5xl font-bold-TOM text-yellow-400 flex flex-row items-end gap-4 ">
           <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
             {showLeaderboard ? (
               <Trophy size={36} strokeWidth={2} />
@@ -354,18 +369,7 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
             </Code>
           </div>
         ))} */}
-          {/* {!!guesses?.score && (
-          <div className="flex self-end flex-col">
-            <div className="text-xl">TOTAL</div>
-            <div className="flex self-end">
-              <Code>
-                <span className="text-xl">{guesses?.score || "-"}</span>
-              </Code>
-            </div>
-          </div>
-        )} */}
-        </div>
       </div>
-    </>
+    </div>
   );
 }

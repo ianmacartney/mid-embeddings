@@ -20,7 +20,6 @@ import {
 } from "./functions";
 import { MAX_ATTEMPTS, NUM_MATCHES } from "./shared";
 import { Doc } from "./_generated/dataModel";
-import { nullThrows } from "convex-helpers";
 import { pruneNull } from "convex-helpers";
 
 const counter = new ShardedCounter(components.shardedCounter, {
