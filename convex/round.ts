@@ -1,11 +1,12 @@
 import { ShardedCounter } from "@convex-dev/sharded-counter";
 import { getOrThrow } from "convex-helpers/server/relationships";
 import { ConvexError, Infer } from "convex/values";
-import { components, internal } from "./_generated/api";
+import { api, components, internal } from "./_generated/api";
 import { embedWithCache, getTextByTitle } from "./embed";
 import {
   error,
   globalLeaderboard,
+  internalAction,
   internalMutation,
   internalQuery,
   migrations,
@@ -18,6 +19,9 @@ import {
   vv as v,
 } from "./functions";
 import { MAX_ATTEMPTS, NUM_MATCHES } from "./shared";
+import { Doc } from "./_generated/dataModel";
+import { nullThrows } from "convex-helpers";
+import { pruneNull } from "convex-helpers";
 
 const counter = new ShardedCounter(components.shardedCounter, {
   shards: {
@@ -137,6 +141,74 @@ export const makeGuess = userAction({
       title: args.title,
       embeddingId,
     });
+  },
+});
+
+/**
+ * Returns the closest word to the given title.
+ * Helpful for debugging, and future use cases like autocomplete.
+ */
+export const closestWords = internalAction({
+  args: {
+    title: v.string(),
+    roundId: v.optional(v.id("rounds")),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<{ title: string; score: number }[]> => {
+    let roundId = args.roundId;
+    if (!roundId) {
+      const round = await ctx.runQuery(api.round.getActiveRound);
+      if (!round.ok || !round.value) {
+        throw new ConvexError("No active round found.");
+      }
+      roundId = round.value.roundId;
+    }
+    const namespaceId = await ctx.runQuery(internal.round.namespaceId, {
+      roundId,
+    });
+    const results = await ctx.vectorSearch("embeddings", "embedding", {
+      filter: (q) => q.eq("namespaceId", namespaceId),
+      vector: await embedWithCache(ctx, args.title),
+      limit: args.limit ?? 10,
+    });
+    if (results.length === 0) {
+      throw new ConvexError(`No embedding found for ${args.title}.`);
+    }
+    const embeddingIds = results.map((r) => r._id);
+
+    console.log("score", results[0]._score);
+    const texts: Doc<"texts">[] = await ctx.runQuery(
+      internal.round.textByEmbedding,
+      {
+        embeddingIds,
+      },
+    );
+    return texts.map((t) => ({
+      title: t.title,
+      score: results.find((r) => r._id === t.embeddingId)!._score,
+    }));
+  },
+});
+export const namespaceId = internalQuery({
+  args: { roundId: v.id("rounds") },
+  handler: async (ctx, args) => {
+    const round = await getOrThrow(ctx, args.roundId);
+    return round.namespaceId;
+  },
+});
+export const textByEmbedding = internalQuery({
+  args: { embeddingIds: v.array(v.id("embeddings")) },
+  handler: async (ctx, args) => {
+    return pruneNull(
+      await Promise.all(
+        args.embeddingIds.map((embeddingId) =>
+          ctx.db
+            .query("texts")
+            .withIndex("embeddingId", (q) => q.eq("embeddingId", embeddingId))
+            .unique(),
+        ),
+      ),
+    );
   },
 });
 
