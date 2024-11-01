@@ -28,18 +28,18 @@ import { FunctionArgs, paginationOptsValidator } from "convex/server";
 import { omit } from "convex-helpers";
 import { nullThrows } from "convex-helpers";
 import { embedWithCache, getTextByTitle } from "./embed";
-import { RateLimiter } from "@convex-dev/ratelimiter";
+import { HOUR, RateLimiter, SECOND } from "@convex-dev/ratelimiter";
 import { components } from "./_generated/api";
 import { NUM_MATCHES } from "./shared";
 
-const SECOND = 1000;
-const MINUTE = 60 * SECOND;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-
 const rate = new RateLimiter(components.ratelimiter, {
   createNamespace: { kind: "token bucket", period: 10 * SECOND, rate: 1 },
-  addText: { kind: "token bucket", period: DAY, rate: 10_000, shards: 10 },
+  addText: {
+    kind: "token bucket",
+    period: 24 * HOUR,
+    rate: 10_000,
+    shards: 10,
+  },
   basicSearch: { kind: "token bucket", period: SECOND, rate: 1, capacity: 5 },
   midSearch: { kind: "token bucket", period: SECOND, rate: 1 },
 });
