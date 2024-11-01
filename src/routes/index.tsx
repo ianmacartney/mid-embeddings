@@ -1,5 +1,4 @@
 import { Code } from "@/components/Code";
-import { Flipboard } from "@/components/Flipboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
@@ -89,18 +88,6 @@ function GuessInput({ round }: { round?: RoundInfo }) {
       toast({ title: "Guess already made" });
       return;
     }
-    const check = (word: string) => {
-      if (guess.includes(word)) {
-        toast({
-          title: "Word cannot include target word",
-          description: `Your guess ${guess} includes ${word}.`,
-        });
-        return true;
-      }
-    };
-    if (check(round.left) || check(round.right)) {
-      return;
-    }
     setGuessing(true);
     convex
       .action(api.round.makeGuess, {
@@ -114,7 +101,7 @@ function GuessInput({ round }: { round?: RoundInfo }) {
             ? e.data
             : "Something went wrong. Try refreshing your browser.";
         toast({
-          title: "Error making guess",
+          title: "Error submitting guess",
           description,
         });
       })

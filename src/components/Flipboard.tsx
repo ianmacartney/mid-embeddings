@@ -18,18 +18,10 @@ export const Flipboard = ({
   obfuscate: boolean;
   randomize?: boolean;
 }) => {
-  const valueToDisplay = useMemo(() => {
-    if (!randomize) return value;
-    return value
-      .split("")
-      .sort(() => Math.random() - 0.5)
-      .join("");
-  }, [value, randomize]);
-
   return (
     <div className="flex flex-row gap-4">
       <Code>{rank}</Code>
-      <Code>{valueToDisplay}</Code>
+      <Code>{value}</Code>
     </div>
   );
 };

@@ -126,7 +126,7 @@ export const makeGuess = userAction({
         limit: 1,
       });
       if (results.length === 0) {
-        return error(`No embedding found for ${args.title}.`);
+        throw new ConvexError(`No embedding found for ${args.title}.`);
       }
       embeddingId = results[0]._id;
     }
@@ -155,7 +155,7 @@ export const insertGuess = internalMutation({
       .unique();
     const round = await getOrThrow(ctx, args.roundId);
     if (!round.active) {
-      return error("Round is not active.");
+      throw new ConvexError("Round is not active.");
     }
 
     const index = round.matches.slice(0, NUM_MATCHES).indexOf(args.embeddingId);
@@ -172,18 +172,29 @@ export const insertGuess = internalMutation({
             t.title === args.title || (rank !== undefined && t.rank === rank),
         )
       ) {
-        return error("Guess already submitted.");
+        throw new ConvexError("Guess already submitted.");
       }
       if (guess.attempts.length >= MAX_ATTEMPTS) {
-        return error("Max attempts reached.");
+        throw new ConvexError("Max attempts reached.");
       }
       const matched = guess.attempts.filter((t) => t.rank !== undefined).length;
       if (NUM_MATCHES === matched) {
-        return error("All matches already guessed.");
+        throw new ConvexError("All matches already guessed.");
       }
       if (guess.submittedAt) {
-        return error("Guesses already submitted.");
+        throw new ConvexError("Guesses already submitted.");
       }
+      const lower = args.title.toLowerCase().trim();
+      const check = (word: string) => {
+        if (lower.includes(word) || word.includes(lower)) {
+          throw new ConvexError(
+            "Word cannot include target word. " +
+              `Your guess ${args.title} includes ${word}.`,
+          );
+        }
+      };
+      check(round.left);
+      check(round.right);
       let submittedAt = guess.submittedAt;
       if (rank !== undefined && NUM_MATCHES === matched + 1) {
         submittedAt = Date.now();
