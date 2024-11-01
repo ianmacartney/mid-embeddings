@@ -321,7 +321,10 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
             return (
               <div
                 key={result.title}
-                className="flex flex-row justify-between text-primary"
+                className={cn(
+                  "flex flex-row justify-between text-primary",
+                  result.score > 0 && "text-green-500",
+                )}
               >
                 <Code>
                   <span className="text-xl">{result.title}</span>
