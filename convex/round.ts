@@ -101,7 +101,7 @@ export const lookupTextEmbedding = internalQuery({
   handler: async (ctx, args) => {
     const round = await getOrThrow(ctx, args.roundId);
     const text = await getTextByTitle(ctx, round.namespaceId, args.title);
-    return text?.embeddingId;
+    return { embeddingId: text?.embeddingId, namespaceId: round.namespaceId };
   },
 });
 
@@ -112,15 +112,17 @@ export const makeGuess = userAction({
     if (!userId) {
       throw new ConvexError("Not logged in.");
     }
-    let embeddingId = await ctx.runQuery(internal.round.lookupTextEmbedding, {
+    const result = await ctx.runQuery(internal.round.lookupTextEmbedding, {
       userId,
       roundId: args.roundId,
       title: args.title,
     });
+    let embeddingId = result?.embeddingId;
     if (!embeddingId) {
       // TODO: we should be stricter in only accepting text that matches the
       // stem of valid text.
       const results = await ctx.vectorSearch("embeddings", "embedding", {
+        filter: (q) => q.eq("namespaceId", result.namespaceId),
         vector: await embedWithCache(ctx, args.title),
         limit: 1,
       });
