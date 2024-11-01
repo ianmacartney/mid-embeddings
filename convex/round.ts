@@ -92,7 +92,7 @@ export const myRank = userQuery({
     return (
       (await roundLeaderboard.offsetOf(
         ctx,
-        [args.roundId, guess.score, guess.submittedAt ?? Infinity],
+        [args.roundId, guess.score, guess.submittedAt ?? Date.now()],
         guess._id,
         { prefix: [args.roundId] },
       )) + 1
