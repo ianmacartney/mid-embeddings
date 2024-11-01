@@ -159,9 +159,8 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                 How to play
               </div>
               <div className="text-3xl">
-                Guess the words that match the two target words, according to AI
-                embeddings. Bonus points for finding all {NUM_MATCHES} target
-                words.
+                Guess the words that match the two target words. Try to find all{" "}
+                {NUM_MATCHES} top words!
               </div>
             </div>
           </div>
