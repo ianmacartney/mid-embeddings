@@ -288,7 +288,10 @@ function Guesses({ roundId }: { roundId: Id<"rounds"> }) {
         {ranked.map((result) => {
           //const [left, right] = getLR(result);
           return (
-            <div className="flex flex-row justify-between text-primary">
+            <div
+              key={result.title}
+              className="flex flex-row justify-between text-primary"
+            >
               <Code>
                 <span className="text-xl">{result.title}</span>
               </Code>
@@ -305,8 +308,8 @@ function Guesses({ roundId }: { roundId: Id<"rounds"> }) {
         </div>
         {/* {Array.from({
           length: MAX_ATTEMPTS - (guesses?.attempts.length || 0),
-        }).map(() => (
-          <div className="flex flex-row justify-between">
+        }).map((_, i) => (
+          <div key={i} className="flex flex-row justify-between">
             <Code>
               <span className="text-xl">{"-"}</span>
             </Code>
