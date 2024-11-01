@@ -42,9 +42,10 @@ export function UserMenu() {
           {user && !user.isAnonymous && (
             <>
               <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
+              <UserStats />
               <Link
                 to="/author"
-                className="p-2 transition-colors hover:text-muted-foreground [&.active]:text-muted-foreground"
+                className="p-2 text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground"
               >
                 Explore your own
               </Link>
@@ -60,6 +61,20 @@ export function UserMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+  );
+}
+
+function UserStats() {
+  const overallStats = useQuery(api.users.overallStats);
+  return (
+    <>
+      <DropdownMenuLabel className="font-normal">
+        Rank: #{overallStats?.rank ?? "..."}
+      </DropdownMenuLabel>
+      <DropdownMenuLabel className="font-normal">
+        Total score: {overallStats?.score ?? "..."}
+      </DropdownMenuLabel>
+    </>
   );
 }
 

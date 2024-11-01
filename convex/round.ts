@@ -5,6 +5,7 @@ import { components, internal } from "./_generated/api";
 import { embedWithCache, getTextByTitle } from "./embed";
 import {
   error,
+  globalLeaderboard,
   internalMutation,
   internalQuery,
   migrations,
@@ -221,10 +222,38 @@ export const insertGuess = internalMutation({
   },
 });
 
-export const totalGuesses = query({
+export const globalStats = query({
   args: {},
   handler: async (ctx) => {
-    return counter.count(ctx, "guesses:total");
+    const results = await globalLeaderboard.paginate(
+      ctx,
+      undefined,
+      undefined,
+      "desc",
+      10,
+    );
+    const leaders = await Promise.all(
+      results.page.map(async (leader) => {
+        const user = await getOrThrow(ctx, leader.id);
+        if (user.isAnonymous) {
+          return {
+            score: leader.sumValue,
+            name: "Anonymous",
+            id: leader.id,
+          };
+        }
+        return {
+          score: leader.sumValue,
+          id: leader.id,
+          name: user.name,
+        };
+      }),
+    );
+
+    return {
+      totalGuesses: await counter.count(ctx, "guesses:total"),
+      leaders,
+    };
   },
 });
 
