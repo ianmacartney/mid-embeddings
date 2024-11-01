@@ -8,7 +8,8 @@ import migrations from "@convex-dev/migrations/convex.config";
 
 const app = defineApp();
 
-app.use(aggregate, { name: "leaderboard" });
+app.use(aggregate, { name: "globalLeaderboard" });
+app.use(aggregate, { name: "roundLeaderboard" });
 app.use(crons);
 app.use(actionCache);
 app.use(ratelimiter);

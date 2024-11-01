@@ -7,11 +7,11 @@ import {
   error,
   internalMutation,
   internalQuery,
-  leaderboard,
   migrations,
   ok,
   query,
   resultValidator,
+  roundLeaderboard,
   userAction,
   userQuery,
   vv as v,
@@ -88,7 +88,7 @@ export const myRank = userQuery({
     if (!bestGuess) {
       return -1;
     }
-    return leaderboard.offsetOf(
+    return roundLeaderboard.offsetOf(
       ctx,
       [args.roundId, bestGuess.score, bestGuess.submittedAt ?? Infinity],
       bestGuess._id,

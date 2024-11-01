@@ -33,17 +33,29 @@ import { TableAggregate } from "@convex-dev/aggregate";
 
 const triggers = new Triggers<DataModel>();
 
-export const leaderboard = new TableAggregate<
+export const roundLeaderboard = new TableAggregate<
   [Id<"rounds">, number, number],
   DataModel,
   "guesses"
->(components.leaderboard, {
+>(components.roundLeaderboard, {
   // Sort by score, then by submission time (newest first)
   // So we can find the first submission with the highest score for a given round.
   sortKey: (d) => [d.roundId, d.score, -(d.submittedAt ?? Infinity)],
   sumValue: (d) => d.score,
 });
-triggers.register("guesses", leaderboard.trigger());
+triggers.register("guesses", roundLeaderboard.trigger());
+
+export const globalLeaderboard = new TableAggregate<
+  [number, number],
+  DataModel,
+  "guesses"
+>(components.globalLeaderboard, {
+  // Sort by score, then by submission time (newest first)
+  // So we can find the first submission with the highest score for a given round.
+  sortKey: (d) => [d.score, -(d.submittedAt ?? Infinity)],
+  sumValue: (d) => d.score,
+});
+triggers.register("guesses", globalLeaderboard.trigger());
 
 export const mutation = customMutation(mutationRaw, customCtx(triggers.wrapDB));
 export const internalMutation = customMutation(
