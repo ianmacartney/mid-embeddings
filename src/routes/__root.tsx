@@ -125,10 +125,6 @@ function Content() {
           <div className="container py-4 text-sm leading-loose">
             Built with ❤️ at{" "}
             <FooterLink href="https://www.convex.dev/">Convex</FooterLink>.
-            Powered by Convex,{" "}
-            <FooterLink href="https://vitejs.dev">Vite</FooterLink>,{" "}
-            <FooterLink href="https://react.dev/">React</FooterLink> and{" "}
-            <FooterLink href="https://ui.shadcn.com/">shadcn/ui</FooterLink>.
           </div>
         </div>
       </footer>
