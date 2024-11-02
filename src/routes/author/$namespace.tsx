@@ -323,13 +323,21 @@ function Category() {
                     <div className="font-bold">
                       Round: {round.left} - {round.right}
                     </div>
-                    <ol className="list-decimal list-inside mt-2">
-                      {round.matches.map((m) => (
-                        <li key={m} className="pl-2">
-                          {m}
-                        </li>
+                    <div className="grid grid-flow-col auto-cols-fr gap-x-8 mt-2">
+                      {chunk(round.matches, 20).map((column, colIndex) => (
+                        <ol
+                          key={colIndex}
+                          className="list-decimal list-inside"
+                          start={colIndex * 20 + 1}
+                        >
+                          {column.map((m) => (
+                            <li key={m} className="pl-2">
+                              {m}
+                            </li>
+                          ))}
+                        </ol>
                       ))}
-                    </ol>
+                    </div>
                   </div>
                 )}
               </div>
