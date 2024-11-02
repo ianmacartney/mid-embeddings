@@ -34,8 +34,12 @@ const fn = api.namespace;
 
 function Namespace() {
   const { namespace } = Route.useParams();
-  const { name, description, isEmpty } =
-    useQuery(fn.getNamespace, { namespace }) || {};
+  const {
+    name,
+    description,
+    isEmpty,
+    public: isPublic,
+  } = useQuery(fn.getNamespace, { namespace }) || {};
   const convex = useConvex();
   const updateNamespace = useMutation(fn.update);
   const rounds = useQuery(fn.listRoundsByNamespace, { namespace }) ?? [];
@@ -326,6 +330,15 @@ function Namespace() {
                       </Button>
                       <Button
                         onClick={() => {
+                          if (!isPublic) {
+                            toast({
+                              title: "Cannot activate private rounds",
+                              description:
+                                "Make the namespace public to activate rounds: " +
+                                `npx convex run namespace:makeNamespacePublic '{"namespace": "${namespace}"}'`,
+                            });
+                            return;
+                          }
                           convex
                             .mutation(fn.setRoundActive, {
                               namespace,
@@ -340,7 +353,7 @@ function Namespace() {
                             );
                         }}
                       >
-                        {round.active ? <Cross1Icon /> : "Activate"}
+                        {round.active ? "Deactivate" : "Activate"}
                       </Button>
                     </div>
                   ))}
@@ -600,11 +613,9 @@ function Midpoint({
       </div>
       <Button
         onClick={() => {
-          void search({ namespace, left, right, skipCache: true }).then(
-            (results) => {
-              setMidpoint(results);
-            },
-          );
+          void search({ namespace, left, right }).then((results) => {
+            setMidpoint(results);
+          });
         }}
       >
         Refresh
