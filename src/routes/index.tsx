@@ -33,15 +33,15 @@ function Home() {
   }
   return (
     <div className="flex flex-col items-center min-h-screen h-full overflow-scroll bg-background text-foreground">
-      <main className="flex flex-col items-center justify-center w-full max-w-4xl px-6">
+      <main className="flex flex-col items-center justify-center w-full max-w-4xl px-3 md:px-6">
         {roundResult?.value &&
           currentRound &&
           currentRound.roundId !== roundResult?.value.roundId && (
-            <div className="flex flex-row items-center justify-center p-8 mb-[-32px]">
+            <div className="flex flex-row items-center justify-center p-4 md:p-8 mb-[-16px] md:mb-[-32px]">
               <Button
                 variant={"default"}
                 size={"lg"}
-                className="text-4xl"
+                className="text-2xl md:text-4xl"
                 onClick={() => {
                   setCurrentRound(roundResult.value);
                 }}
@@ -63,10 +63,10 @@ function Round({ round }: { round: RoundInfo | undefined }) {
   );
   return (
     <div className="flex flex-col items-center justify-center min-h-screen h-full overflow-scroll bg-background text-foreground">
-      <main className="flex flex-col items-start justify-center w-full max-w-5xl gap-4 px-6 py-8">
-        <div className="flex items-start gap-4">
+      <main className="flex flex-col items-start justify-center w-full max-w-5xl gap-2 md:gap-4 px-3 md:px-6 py-4 md:py-8">
+        <div className="flex items-start gap-2 md:gap-4">
           <div className="flex flex-col">
-            <div className="flex flex-col gap-1 pb-12 pt-4">
+            <div className="flex flex-col gap-1 pb-6 md:pb-12 pt-2 md:pt-4">
               <div className="text-3xl text-gray-400 uppercase">
                 How to play
               </div>
@@ -77,8 +77,8 @@ function Round({ round }: { round: RoundInfo | undefined }) {
             </div>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row gap-4 w-full">
-          <div className="w-full md:w-1/2 flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-2 md:gap-4 w-full">
+          <div className="w-full md:w-1/2 flex flex-col gap-2 md:gap-4">
             {round && guesses?.submittedAt ? (
               <>
                 <RoundLeaderboard round={round} />
@@ -86,12 +86,12 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                 <GlobalStats />
               </>
             ) : (
-              <div className="bg-card flex flex-col gap-3 md:gap-6 py-4 md:py-6 px-4">
+              <div className="bg-card flex flex-col gap-2 md:gap-6 py-3 md:py-6 px-3 md:px-4">
                 <div className="text-xl md:text-2xl text-slate-600 uppercase">
                   Let's Play
                 </div>
                 {round?.category && (
-                  <div className="text-3xl md:text-5xl text-yellow-400 flex flex-row items-end gap-1 md:gap-4 pb-2 md:pb-4">
+                  <div className="text-3xl md:text-5xl text-yellow-400 flex flex-row items-end gap-1 md:gap-4 pb-1 md:pb-4">
                     <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
                       <LetterText size={24} strokeWidth={2} />
                     </span>{" "}
@@ -117,7 +117,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
             )}
           </div>
 
-          <div className="w-full md:w-1/2 flex flex-col gap-4">
+          <div className="w-full md:w-1/2 flex flex-col gap-2 md:gap-4">
             {guesses ? (
               <>
                 <RoundStats guesses={guesses} />
