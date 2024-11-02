@@ -8,7 +8,7 @@ import { RoundInfo } from "@convex/round";
 import { MAX_ATTEMPTS, NUM_MATCHES } from "@convex/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
-import { Award, Earth, Gem, Trophy } from "lucide-react";
+import { Award, Earth, Gem, LetterText, Trophy } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/")({
@@ -21,8 +21,15 @@ function Home() {
   if (roundResult && !roundResult.ok) {
     return <div>Error: {roundResult.error}</div>;
   }
-  if (roundResult?.value && !currentRound) {
+  let round = currentRound;
+  if (
+    roundResult?.value &&
+    (!currentRound ||
+      (currentRound.roundId === roundResult.value.roundId &&
+        currentRound !== roundResult.value))
+  ) {
     setCurrentRound(roundResult.value);
+    round = roundResult.value;
   }
   return (
     <div className="flex flex-col items-center min-h-screen h-full overflow-scroll bg-background text-foreground">
@@ -43,7 +50,7 @@ function Home() {
               </Button>
             </div>
           )}
-        <Round round={currentRound ?? roundResult?.value} />
+        <Round round={round} />
       </main>
     </div>
   );
@@ -83,12 +90,19 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                 <div className="text-2xl text-slate-600 uppercase">
                   Let's Play
                 </div>
-                {/* <div className="text-5xl text-yellow-400 flex flex-row items-end gap-4 pb-4">
-                <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-                  <LetterText size={36} strokeWidth={2} />
-                </span>{" "}
-                Round #1
-              </div> */}
+                {round?.category && (
+                  <div className="text-5xl text-yellow-400 flex flex-row items-end gap-4 pb-4">
+                    <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
+                      <LetterText size={36} strokeWidth={2} />
+                    </span>{" "}
+                    {round?.category}
+                  </div>
+                )}
+                {round?.description && (
+                  <div className="text-2xl text-slate-600 whitespace-pre-line">
+                    {round?.description}
+                  </div>
+                )}
                 <div className="flex flex-col items-start w-full gap-2 font-bold">
                   <div className="flex flex-col items-start gap-4">
                     <div className="text-5xl">{round?.left}</div>

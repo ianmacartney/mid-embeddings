@@ -32,6 +32,8 @@ const roundValidator = v.object({
   roundId: v.id("rounds"),
   left: v.string(),
   right: v.string(),
+  category: v.string(),
+  description: v.string(),
 });
 export type RoundInfo = Infer<typeof roundValidator>;
 
@@ -47,11 +49,14 @@ export const getActiveRound = query({
     if (!round) {
       return error("No active rounds found");
     }
+    const namespace = await getOrThrow(ctx, round?.namespaceId);
     // TODO: if future rounds are invite-only / not public, check access
     return ok({
       roundId: round._id,
       left: round.left,
       right: round.right,
+      category: namespace.name,
+      description: namespace.description,
     });
   },
 });
