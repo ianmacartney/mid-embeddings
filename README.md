@@ -1,8 +1,10 @@
-# Mid: A guessing game with embeddings
+# Mid Meaning - A Guessing Game with AI embeddings
 
 ![Mid screenshot](./screenshot.png)
 
 This explores the midpoint of embeddings using centroid, reciprocal rank fusion, and more.
+
+The game is live at [labs.convex.dev/mid-embeddings](https://labs.convex.dev/mid-embeddings).
 
 ## Setting up
 
