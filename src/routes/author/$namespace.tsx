@@ -27,12 +27,12 @@ import { Doc, Id } from "@convex/_generated/dataModel";
 import { MAX_MATCH_RANK } from "@convex/shared";
 
 export const Route = createFileRoute("/author/$namespace")({
-  component: Namespace,
+  component: Category,
 });
 
 const fn = api.namespace;
 
-function Namespace() {
+function Category() {
   const { namespace } = Route.useParams();
   const {
     name,
@@ -294,7 +294,7 @@ function Namespace() {
                             toast({
                               title: "Cannot activate private rounds",
                               description:
-                                "Make the namespace public to activate rounds: " +
+                                "Make the category public to activate rounds: " +
                                 `npx convex run namespace:makeNamespacePublic '{"namespace": "${namespace}"}'`,
                             });
                             return;

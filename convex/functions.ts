@@ -131,7 +131,7 @@ async function getUserAndNamespace(ctx: QueryCtx, args: { namespace: string }) {
     args.namespace,
   );
   if (!namespace) {
-    throw new Error("Namespace not found");
+    throw new Error("Category not found");
   }
   return { user, namespace };
 }
@@ -141,7 +141,7 @@ function assertIsNamespaceCreator(
   namespace: Doc<"namespaces">,
 ) {
   if (namespace.createdBy !== user._id) {
-    throw new Error("User is not the creator of this namespace");
+    throw new Error("User is not the creator of this category");
   }
 }
 
@@ -150,7 +150,7 @@ function assertIsCreatorOrPublic(
   namespace: Doc<"namespaces">,
 ) {
   if (namespace.createdBy !== user._id && !namespace.public) {
-    throw new Error("User is not the creator of this namespace");
+    throw new Error("User is not the creator of this category");
   }
 }
 

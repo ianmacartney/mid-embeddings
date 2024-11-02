@@ -71,7 +71,7 @@ export const upsertNamespace = userMutation({
     const existing = await getOneFrom(ctx.db, "namespaces", "slug", args.name);
     if (existing) {
       if (existing.createdBy !== ctx.user._id) {
-        throw new Error("Namespace already exists");
+        throw new Error("Category already exists");
       }
       return existing._id;
     }
@@ -769,7 +769,7 @@ export const makeNamespacePublic = internalMutation({
       .withIndex("slug", (q) => q.eq("slug", args.namespace))
       .unique();
     if (!namespace) {
-      throw new Error("Namespace not found");
+      throw new Error("Category not found");
     }
     await ctx.db.patch(namespace._id, { public: true });
   },

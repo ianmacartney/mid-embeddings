@@ -14,7 +14,7 @@ function Author() {
   const upsertNamespace = useMutation(api.namespace.upsertNamespace);
   return (
     <div className="flex flex-col gap-2 items-center min-h-full overflow-scroll bg-background text-foreground">
-      <h2>Namespaces</h2>
+      <h2>Categories</h2>
       <div className="grid grid-cols-6 gap-4 w-full max-w-7xl px-4">
         {namespaces.map((namespace) => (
           <Link
@@ -44,36 +44,42 @@ function Author() {
             </div>
           </Link>
         ))}
+
+        <div className="block">
+          <div className="h-full p-4 rounded-lg border border-dashed border-border hover:border-primary transition-colors bg-card/50 flex flex-col items-center justify-center gap-4 cursor-pointer group">
+            <span className="text-5xl text-muted-foreground group-hover:text-primary">
+              +
+            </span>
+            <Input
+              type="text"
+              placeholder="Create new category"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const name = e.currentTarget.value;
+                  const slug = name.toLowerCase().replace(/\s/g, "-");
+                  e.preventDefault();
+                  e.currentTarget.value = "";
+                  upsertNamespace({
+                    name,
+                    slug,
+                    description: "",
+                    public: false,
+                  }).catch((err) => {
+                    console.log(e);
+                    toast({
+                      title: "Failed to create namespace",
+                      description: err.message,
+                    });
+                    if (!(e.target as HTMLInputElement).value)
+                      (e.target as HTMLInputElement).value = name;
+                  });
+                }
+              }}
+              className="max-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+        </div>
       </div>
-      <form>
-        <Input
-          type="text"
-          placeholder="Create"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              const name = e.currentTarget.value;
-              const slug = name.toLowerCase().replace(/\s/g, "-");
-              e.preventDefault();
-              e.currentTarget.value = "";
-              upsertNamespace({
-                name,
-                slug,
-                description: "",
-                public: false,
-              }).catch((err) => {
-                console.log(e);
-                toast({
-                  title: "Failed to create namespace",
-                  description: err.message,
-                });
-                if (!(e.target as HTMLInputElement).value)
-                  (e.target as HTMLInputElement).value = name;
-              });
-            }
-          }}
-          className="max-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        />
-      </form>
     </div>
   );
 }
