@@ -30,6 +30,7 @@ import { nullThrows } from "convex-helpers";
 import { embedWithCache, getTextByTitle } from "./embed";
 import { HOUR, RateLimiter, SECOND } from "@convex-dev/ratelimiter";
 import { components } from "./_generated/api";
+import { doesNotInclude } from "./round";
 
 const rate = new RateLimiter(components.ratelimiter, {
   createNamespace: { kind: "token bucket", period: 10 * SECOND, rate: 1 },
@@ -691,20 +692,40 @@ async function getPlusMatches(
   namespaceId: Id<"namespaces">,
 ): Promise<{ _id: Id<"embeddings">; _score: number }[]> {
   const target = await embedWithCache(ctx, `${left} + ${right}`);
-  const leftEmbedding = await ctx.runQuery(
+  let leftEmbedding = await ctx.runQuery(
     internal.namespace.lookupNamespaceTextEmbedding,
     {
       namespaceId,
       title: left,
     },
   );
-  const rightEmbedding = await ctx.runQuery(
+  if (!leftEmbedding) {
+    const firstResult = await ctx.vectorSearch("embeddings", "embedding", {
+      vector: await embedWithCache(ctx, left),
+      limit: 1,
+      filter: (q) => q.eq("namespaceId", namespaceId),
+    });
+    if (firstResult.length > 0 && firstResult[0]?._score > 0.9) {
+      leftEmbedding = firstResult[0]?._id;
+    }
+  }
+  let rightEmbedding = await ctx.runQuery(
     internal.namespace.lookupNamespaceTextEmbedding,
     {
       namespaceId,
       title: right,
     },
   );
+  if (!rightEmbedding) {
+    const firstResult = await ctx.vectorSearch("embeddings", "embedding", {
+      vector: await embedWithCache(ctx, right),
+      limit: 1,
+      filter: (q) => q.eq("namespaceId", namespaceId),
+    });
+    if (firstResult.length > 0 && firstResult[0]?._score > 0.9) {
+      rightEmbedding = firstResult[0]?._id;
+    }
+  }
   const results = await ctx.vectorSearch("embeddings", "embedding", {
     vector: target,
     limit: 102, // extra two to account for the left and right embeddings
@@ -723,10 +744,12 @@ export const makeRound = namespaceAdminMutation({
   },
   handler: async (ctx, args): Promise<Id<"rounds">> => {
     const matches = await Promise.all(
-      args.titles.map(async (title) => {
-        const text = await getTextByTitle(ctx, ctx.namespace._id, title);
-        return nullThrows(text).embeddingId;
-      }),
+      args.titles
+        .filter((title) => doesNotInclude(title, [args.left, args.right]))
+        .map(async (title) => {
+          const text = await getTextByTitle(ctx, ctx.namespace._id, title);
+          return nullThrows(text).embeddingId;
+        }),
     );
     return ctx.db.insert("rounds", {
       left: args.left,

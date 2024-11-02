@@ -216,6 +216,14 @@ export const textByEmbedding = internalQuery({
   },
 });
 
+export function doesNotInclude(a: string, b: string[]) {
+  const lowerA = a.toLowerCase().trim();
+  return !b.some((b) => {
+    const lowerB = b.toLowerCase().trim();
+    return lowerA.includes(lowerB) || lowerB.includes(lowerA);
+  });
+}
+
 export const insertGuess = internalMutation({
   args: {
     userId: v.id("users"),
@@ -266,17 +274,15 @@ export const insertGuess = internalMutation({
       if (guess.submittedAt) {
         throw new ConvexError("Guesses already submitted.");
       }
-      const lower = args.title.toLowerCase().trim();
-      const check = (word: string) => {
-        if (lower.includes(word) || word.includes(lower)) {
-          throw new ConvexError(
-            "Word cannot include target word. " +
-              `Your guess ${args.title} includes ${word}.`,
-          );
-        }
-      };
-      check(round.left);
-      check(round.right);
+      if (!doesNotInclude(args.title, [round.left, round.right])) {
+        throw new ConvexError(
+          "Word cannot include target word. " +
+            `Your guess ${args.title} includes ${[round.left, round.right].join(
+              " or ",
+            )}.`,
+        );
+      }
+
       let submittedAt = guess.submittedAt;
       if (rank !== undefined && NUM_MATCHES === matched + 1) {
         submittedAt = Date.now();
