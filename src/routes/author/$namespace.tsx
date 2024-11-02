@@ -443,15 +443,17 @@ function Words({ namespace }: { namespace: string }) {
     { initialNumItems: 10 },
   );
   return (
-    <div className="flex flex-col items-center gap-2 ">
+    <div className="flex flex-col items-center gap-2">
       <span className="text-3xl font-bold">Words</span>
-      {texts.results.map((text) => (
-        <div key={text._id} className="flex items-center gap-4">
-          <div className="flex-1 text-sm font-medium">
-            {text.title} {text.text === text.title ? null : `(${text.text})`}
+      <div className="flex flex-wrap gap-4 justify-center">
+        {texts.results.map((text) => (
+          <div key={text._id} className="flex items-center p-2 border rounded">
+            <div className="text-sm font-medium">
+              {text.title} {text.text === text.title ? null : `(${text.text})`}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
       {texts.status === "CanLoadMore" && (
         <Button onClick={() => texts.loadMore(100)}>Load more</Button>
       )}
