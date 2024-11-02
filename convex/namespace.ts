@@ -689,23 +689,24 @@ async function getPlusMatches(
   );
 }
 
-export const makeRound = namespaceAdminAction({
+export const makeRound = namespaceAdminMutation({
   args: {
     left: v.string(),
     right: v.string(),
+    titles: v.array(v.string()),
   },
   handler: async (ctx, args): Promise<Id<"rounds">> => {
-    const matches = await getPlusMatches(
-      ctx,
-      args.left,
-      args.right,
-      ctx.namespace._id,
+    const matches = await Promise.all(
+      args.titles.map(async (title) => {
+        const text = await getTextByTitle(ctx, ctx.namespace._id, title);
+        return nullThrows(text).embeddingId;
+      }),
     );
-    return ctx.runMutation(internal.namespace.insertRound, {
+    return ctx.db.insert("rounds", {
       ...args,
       namespaceId: ctx.namespace._id,
       active: false,
-      matches: matches.map(({ _id }) => _id),
+      matches,
     });
   },
 });
@@ -721,15 +722,6 @@ export const makeNamespacePublic = internalMutation({
       throw new Error("Namespace not found");
     }
     await ctx.db.patch(namespace._id, { public: true });
-  },
-});
-
-export const insertRound = internalMutation({
-  args: schema.tables.rounds.validator,
-  handler: async (ctx, args): Promise<Id<"rounds">> => {
-    return ctx.db.insert("rounds", {
-      ...args,
-    });
   },
 });
 

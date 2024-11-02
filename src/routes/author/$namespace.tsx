@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Doc } from "@convex/_generated/dataModel";
+import { MAX_MATCH_RANK } from "@convex/shared";
 
 export const Route = createFileRoute("/author/$namespace")({
   component: Namespace,
@@ -534,7 +535,7 @@ function Midpoint({
   strategy: Strategy;
 }) {
   const search = useAction(fn.midpointSearch);
-  const makeRound = useAction(fn.makeRound);
+  const makeRound = useMutation(fn.makeRound);
   const [midpoint, setMidpoint] = useState<Doc<"midpoints">>();
   const getScore = useCallback(
     (match: Doc<"midpoints">["topMatches"][0]): number => {
@@ -618,6 +619,10 @@ function Midpoint({
             namespace,
             left: midpoint.left,
             right: midpoint.right,
+            titles: sorted
+              .filter((r) => getScore(r) > -Infinity)
+              .slice(0, MAX_MATCH_RANK)
+              .map((r) => r.title),
           });
         }}
       >
