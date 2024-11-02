@@ -95,6 +95,26 @@ export const listRoundsByNamespace = namespaceUserQuery({
   },
 });
 
+export const getRound = namespaceUserQuery({
+  args: { roundId: v.id("rounds") },
+  handler: async (ctx, args) => {
+    const round = await ctx.db.get(args.roundId);
+    if (round?.namespaceId !== ctx.namespace._id) {
+      throw new Error("Round not in authorized namespace");
+    }
+    return {
+      ...round,
+      matches: await Promise.all(
+        round.matches.map(async (id) => {
+          const text = await getOneFrom(ctx.db, "texts", "embeddingId", id);
+          if (!text) throw new Error("Text not found");
+          return text.title;
+        }),
+      ),
+    };
+  },
+});
+
 export const randomTitle = namespaceUserMutation({
   args: {},
   handler: async (ctx) => {

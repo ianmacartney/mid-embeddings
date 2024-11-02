@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Doc } from "@convex/_generated/dataModel";
+import { Doc, Id } from "@convex/_generated/dataModel";
 import { MAX_MATCH_RANK } from "@convex/shared";
 
 export const Route = createFileRoute("/author/$namespace")({
@@ -43,6 +43,11 @@ function Namespace() {
   const convex = useConvex();
   const updateNamespace = useMutation(fn.update);
   const rounds = useQuery(fn.listRoundsByNamespace, { namespace }) ?? [];
+  const [roundId, setRoundId] = useState<Id<"rounds">>();
+  const round = useQuery(
+    fn.getRound,
+    roundId ? { roundId, namespace } : "skip",
+  );
   const [leftRandomText, setLeftRandomText] = useState("");
   const [rightRandomText, setRightRandomText] = useState("");
   useEffect(() => {
@@ -318,11 +323,7 @@ function Namespace() {
                         key={round._id}
                         variant="secondary"
                         onClick={() => {
-                          setWords((words) => ({
-                            ...words,
-                            left: round.left,
-                            right: round.right,
-                          }));
+                          setRoundId(round._id);
                         }}
                       >
                         {round.left} - {round.right}{" "}
@@ -358,6 +359,20 @@ function Namespace() {
                     </div>
                   ))}
                 </div>
+                {round && (
+                  <div>
+                    <div className="font-bold">
+                      Round: {round.left} - {round.right}
+                    </div>
+                    <ol className="list-decimal list-inside mt-2">
+                      {round.matches.map((m) => (
+                        <li key={m} className="pl-2">
+                          {m}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
               </div>
             </div>
             <Words namespace={namespace} />
