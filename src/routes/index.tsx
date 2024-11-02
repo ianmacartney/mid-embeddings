@@ -338,18 +338,32 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
 
         {ranked.map((result) => {
           //const [left, right] = getLR(result);
+          const [css, heat] = result.rank
+            ? result.rank < NUM_MATCHES
+              ? ["text-green-500", "🔥"]
+              : result.rank < 25
+                ? ["", "☀️"]
+                : result.rank < 50
+                  ? ["", "🌤️"]
+                  : result.rank < 75
+                    ? ["", "☁️"]
+                    : ["", "🌧️"]
+            : ["", "🥶"];
           return (
             <div
               key={result.title}
               className={cn(
-                "flex flex-row justify-between text-primary",
-                result.points > 0 && "text-green-500",
+                "flex flex-row items-center justify-start gap-2 text-primary",
+                css,
               )}
             >
               <Code>
                 <span className="text-xl">{result.title}</span>
               </Code>
-              <Code>
+              {/* {result.rank && result.rank > NUM_MATCHES && ( */}
+              <span className="text-xl uppercase ">{heat}</span>
+              {/* )} */}
+              <Code className="ml-auto">
                 <span className="text-xl">{result.points}</span>
               </Code>
             </div>
