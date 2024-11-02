@@ -62,15 +62,18 @@ const schema = defineSchema({
     leftEmbedding: v.array(v.number()),
     rightEmbedding: v.array(v.number()),
     midpointEmbedding: v.array(v.number()),
+    plusEmbedding: v.array(v.number()),
     topMatches: v.array(
       v.object({
         title: v.string(),
         score: v.number(),
         leftScore: v.number(),
         rightScore: v.number(),
+        plusScore: v.number(),
         // ranks
         leftRank: v.number(),
         rightRank: v.number(),
+        plusRank: v.number(),
         rrfScore: v.number(),
         leftOverallRank: v.number(),
         rightOverallRank: v.number(),

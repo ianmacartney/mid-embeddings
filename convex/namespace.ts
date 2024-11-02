@@ -1,7 +1,7 @@
 import { Infer, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
-import { DatabaseReader } from "./_generated/server";
+import { ActionCtx, DatabaseReader } from "./_generated/server";
 import {
   getOrThrow,
   getManyFrom,
@@ -30,7 +30,6 @@ import { nullThrows } from "convex-helpers";
 import { embedWithCache, getTextByTitle } from "./embed";
 import { HOUR, RateLimiter, SECOND } from "@convex-dev/ratelimiter";
 import { components } from "./_generated/api";
-import { NUM_MATCHES } from "./shared";
 
 const rate = new RateLimiter(components.ratelimiter, {
   createNamespace: { kind: "token bucket", period: 10 * SECOND, rate: 1 },
@@ -41,7 +40,7 @@ const rate = new RateLimiter(components.ratelimiter, {
     shards: 10,
   },
   basicSearch: { kind: "token bucket", period: SECOND, rate: 1, capacity: 5 },
-  midSearch: { kind: "token bucket", period: SECOND, rate: 1 },
+  midSearch: { kind: "token bucket", period: SECOND, rate: 5 },
 });
 
 export const listNamespaces = userQuery({
@@ -327,6 +326,19 @@ export const midpointSearch = namespaceUserAction({
         .filter(({ _id }) => leftOverallRankById.has(_id))
         .map(({ _id, _score }, i) => [_id, { _score, i }]),
     );
+    const plusEmbedding = await embedWithCache(
+      ctx,
+      `${args.left} + ${args.right}`,
+    );
+    const plusMatches = await getPlusMatches(
+      ctx,
+      args.left,
+      args.right,
+      ctx.namespace._id,
+    );
+    const plusById = new Map(
+      plusMatches.map(({ _id, _score }, i) => [_id, { _score, i }]),
+    );
 
     const topMatches = leftResults
       .filter(({ _id }) => rightRankById.has(_id))
@@ -338,6 +350,8 @@ export const midpointSearch = namespaceUserAction({
           embeddingId: _id,
           leftRank,
           rightRank,
+          plusRank: plusById.get(_id)?.i ?? -Infinity,
+          plusScore: plusById.get(_id)?._score ?? -Infinity,
           rrfScore: reciprocalRankFusion(leftRank, rightRank),
           leftOverallRank,
           rightOverallRank,
@@ -358,11 +372,29 @@ export const midpointSearch = namespaceUserAction({
           embeddingId: id,
           leftRank: -Infinity,
           rightRank: -Infinity,
+          plusRank: plusById.get(id)?.i ?? -Infinity,
+          plusScore: plusById.get(id)?._score ?? -Infinity,
           leftOverallRank: leftOverallRankById.get(id) ?? -Infinity,
           rightOverallRank: rightOverallRankById.get(id) ?? -Infinity,
           rrfOverallScore: -Infinity,
           rrfScore: -Infinity,
           score,
+        });
+      }
+    }
+    for (const [id, { _score, i }] of plusById.entries()) {
+      if (!rightRankById.has(id) && !midpointMatchScoresById.has(id)) {
+        topMatches.push({
+          embeddingId: id,
+          plusRank: i,
+          plusScore: _score,
+          leftRank: -Infinity,
+          rightRank: -Infinity,
+          leftOverallRank: -Infinity,
+          rightOverallRank: -Infinity,
+          rrfScore: -Infinity,
+          rrfOverallScore: -Infinity,
+          score: midpointMatchScoresById.get(id) ?? -Infinity,
         });
       }
     }
@@ -373,6 +405,7 @@ export const midpointSearch = namespaceUserAction({
       namespaceId: ctx.namespace._id,
       leftEmbedding,
       rightEmbedding,
+      plusEmbedding,
       topMatches,
       midpointEmbedding,
     }) as Promise<Doc<"midpoints">>;
@@ -509,6 +542,7 @@ const strategy = v.union(
   v.literal("rankOverall"),
   v.literal("midpoint"),
   v.literal("lxr"),
+  v.literal("plus"),
 );
 export type Strategy = Infer<typeof strategy>;
 export const Strategies = strategy.members.map((m) => m.value);
@@ -552,20 +586,31 @@ export async function computeGuess(
   embedding: number[],
   strategy: Strategy,
 ) {
+  if (strategy === "plus") {
+    const leftScore = dotProduct(midpoint.leftEmbedding, embedding);
+    const rightScore = dotProduct(midpoint.rightEmbedding, embedding);
+    const score = dotProduct(midpoint.plusEmbedding, embedding);
+    const rank = findRank(
+      midpoint.topMatches.map((m) => m.plusScore).sort((a, b) => b - a),
+      score,
+    );
+    return {
+      rank,
+      score,
+      leftScore,
+      rightScore,
+      lxrScore: leftScore * rightScore,
+    };
+  }
   if (strategy === "midpoint" || strategy === "lxr") {
     const score = dotProduct(midpoint.midpointEmbedding, embedding);
     const leftScore = dotProduct(midpoint.leftEmbedding, embedding);
     const rightScore = dotProduct(midpoint.rightEmbedding, embedding);
     const lxrScore = leftScore * rightScore;
-    const sortedMatches = midpoint.topMatches
-      .slice()
-      .sort(
-        strategy === "lxr"
-          ? (a, b) => b.lxrScore - a.lxrScore
-          : (a, b) => b.score - a.score,
-      );
     const rank = findRank(
-      sortedMatches.map((m) => m.score),
+      midpoint.topMatches
+        .map((m) => (strategy === "lxr" ? m.lxrScore : m.score))
+        .sort((a, b) => b - a),
       score,
     );
     return {
@@ -605,33 +650,85 @@ export async function computeGuess(
   }
 }
 
-export const makeRound = namespaceAdminMutation({
+export const lookupNamespaceTextEmbedding = internalQuery({
+  args: { namespaceId: v.id("namespaces"), title: v.string() },
+  handler: async (ctx, args) => {
+    const text = await getTextByTitle(ctx, args.namespaceId, args.title);
+    return text?.embeddingId;
+  },
+});
+
+async function getPlusMatches(
+  ctx: ActionCtx,
+  left: string,
+  right: string,
+  namespaceId: Id<"namespaces">,
+): Promise<{ _id: Id<"embeddings">; _score: number }[]> {
+  const target = await embedWithCache(ctx, `${left} + ${right}`);
+  const leftEmbedding = await ctx.runQuery(
+    internal.namespace.lookupNamespaceTextEmbedding,
+    {
+      namespaceId,
+      title: left,
+    },
+  );
+  const rightEmbedding = await ctx.runQuery(
+    internal.namespace.lookupNamespaceTextEmbedding,
+    {
+      namespaceId,
+      title: right,
+    },
+  );
+  const results = await ctx.vectorSearch("embeddings", "embedding", {
+    vector: target,
+    limit: 102, // extra two to account for the left and right embeddings
+    filter: (q) => q.eq("namespaceId", namespaceId),
+  });
+  return results.filter(
+    ({ _id }) => _id != leftEmbedding && _id != rightEmbedding,
+  );
+}
+
+export const makeRound = namespaceAdminAction({
   args: {
     left: v.string(),
     right: v.string(),
   },
-  handler: async (ctx, args) => {
-    const midpoint = await lookupMidpoint(ctx, {
-      ...args,
-      namespaceId: ctx.namespace._id,
-    });
-    if (!midpoint) {
-      throw new Error("Midpoint not found");
-    } else if (midpoint.namespaceId !== ctx.namespace._id) {
-      throw new Error("Midpoint not in authorized namespace");
-    }
-    const matches = await asyncMap(
-      midpoint.topMatches.slice(0, NUM_MATCHES),
-      async (m) => {
-        const text = await getTextByTitle(ctx, midpoint.namespaceId, m.title);
-        return text!.embeddingId;
-      },
+  handler: async (ctx, args): Promise<Id<"rounds">> => {
+    const matches = await getPlusMatches(
+      ctx,
+      args.left,
+      args.right,
+      ctx.namespace._id,
     );
-    return ctx.db.insert("rounds", {
+    return ctx.runMutation(internal.namespace.insertRound, {
       ...args,
       namespaceId: ctx.namespace._id,
       active: false,
-      matches,
+      matches: matches.map(({ _id }) => _id),
+    });
+  },
+});
+
+export const makeNamespacePublic = internalMutation({
+  args: { namespace: v.string() },
+  handler: async (ctx, args) => {
+    const namespace = await ctx.db
+      .query("namespaces")
+      .withIndex("slug", (q) => q.eq("slug", args.namespace))
+      .unique();
+    if (!namespace) {
+      throw new Error("Namespace not found");
+    }
+    await ctx.db.patch(namespace._id, { public: true });
+  },
+});
+
+export const insertRound = internalMutation({
+  args: schema.tables.rounds.validator,
+  handler: async (ctx, args): Promise<Id<"rounds">> => {
+    return ctx.db.insert("rounds", {
+      ...args,
     });
   },
 });

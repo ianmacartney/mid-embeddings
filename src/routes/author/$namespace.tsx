@@ -219,7 +219,31 @@ function Namespace() {
                 namespace={namespace}
                 left={words.left}
                 right={words.right}
-                strategy={strategy}
+                strategy={"plus"}
+              />
+              <Midpoint
+                namespace={namespace}
+                left={words.left}
+                right={words.right}
+                strategy={"rank"}
+              />
+              <Midpoint
+                namespace={namespace}
+                left={words.left}
+                right={words.right}
+                strategy={"rankOverall"}
+              />
+              <Midpoint
+                namespace={namespace}
+                left={words.left}
+                right={words.right}
+                strategy={"midpoint"}
+              />
+              <Midpoint
+                namespace={namespace}
+                left={words.left}
+                right={words.right}
+                strategy={"lxr"}
               />
               <BasicSearch namespace={namespace} text={words.right} />
             </div>
@@ -510,11 +534,13 @@ function Midpoint({
   strategy: Strategy;
 }) {
   const search = useAction(fn.midpointSearch);
-  const makeRound = useMutation(fn.makeRound);
+  const makeRound = useAction(fn.makeRound);
   const [midpoint, setMidpoint] = useState<Doc<"midpoints">>();
   const getScore = useCallback(
     (match: Doc<"midpoints">["topMatches"][0]): number => {
       switch (strategy) {
+        case "plus":
+          return match.plusScore;
         case "lxr":
           return match.lxrScore;
         case "midpoint":
@@ -531,8 +557,8 @@ function Midpoint({
     match: Doc<"midpoints">["topMatches"][0],
   ): [number, number] => {
     switch (strategy) {
+      case "plus":
       case "lxr":
-        return [match.leftScore, match.rightScore];
       case "midpoint":
         return [match.leftScore, match.rightScore];
       case "rank":
@@ -554,9 +580,7 @@ function Midpoint({
   }, [namespace, left, right, search]);
   return (
     <div className="flex flex-col items-center w-full gap-2">
-      <div className="text-lg">
-        {left} - {right}
-      </div>
+      <div className="text-lg">{strategy}</div>
       <div className="flex flex-col justify-center gap-2">
         {sorted.slice(0, 10).map((result, i) => {
           const [left, right] = getLR(result);
@@ -565,7 +589,10 @@ function Midpoint({
               key={result.title + i}
               className="px-3 py-1 text-sm font-medium rounded-md bg-muted text-muted-foreground"
             >
-              {f(left)} ⬅️ {result.title}:{f(getScore(result))} ➡️ {f(right)}
+              {result.title}:{f(getScore(result))}
+              <div>
+                {f(left)} ↔️ {f(right)}
+              </div>
             </div>
           );
         })}
