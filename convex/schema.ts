@@ -106,7 +106,7 @@ const schema = defineSchema({
       v.object({
         title: v.string(),
         rank: v.optional(v.number()),
-        points: v.optional(v.number()),
+        points: pretendRequired(v.number()),
       }),
     ),
     submittedAt: v.optional(v.number()),

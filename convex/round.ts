@@ -235,10 +235,10 @@ export const insertGuess = internalMutation({
 
     const index = round.matches.indexOf(args.embeddingId);
     const rank = index === -1 ? undefined : index;
-    const attempt = { title: args.title, rank };
     let score = guess?.score ?? 0;
     const points =
       rank !== undefined && rank < NUM_MATCHES ? NUM_MATCHES - rank : 0;
+    const attempt = { title: args.title, rank, points };
     if (rank !== undefined) {
       score += points;
     }

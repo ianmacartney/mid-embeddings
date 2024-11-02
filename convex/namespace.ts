@@ -709,7 +709,8 @@ export const makeRound = namespaceAdminMutation({
       }),
     );
     return ctx.db.insert("rounds", {
-      ...args,
+      left: args.left,
+      right: args.right,
       namespaceId: ctx.namespace._id,
       active: false,
       matches,
