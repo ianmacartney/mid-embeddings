@@ -277,7 +277,6 @@ function RoundLeaderboard({ round }: { round: RoundInfo }) {
 
 function RoundStats({ guesses }: { guesses: Doc<"guesses"> }) {
   const myRank = useQuery(api.round.myRank, { roundId: guesses.roundId });
-  const viewer = useQuery(api.users.viewer);
   return (
     <div className="bg-card flex flex-col gap-6 py-6 px-4 w-full">
       <div className="text-2xl text-slate-600 uppercase">Stats</div>
@@ -305,13 +304,6 @@ function RoundStats({ guesses }: { guesses: Doc<"guesses"> }) {
           </div>
         </div>
       </div>
-      {(!viewer || viewer.score < 10) && (
-        <div className="font-bold-TOM text-slate-600">
-          There are {NUM_MATCHES} target words to guess. If you guess the first
-          word correctly, you get {NUM_MATCHES} points. If you guess the second
-          word correctly, you get {NUM_MATCHES - 1} points. And so on.
-        </div>
-      )}
     </div>
   );
 }
@@ -327,19 +319,17 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
     .sort((a, b) =>
       a.points !== b.points ? b.points - a.points : a.index - b.index,
     );
+  const viewer = useQuery(api.users.viewer);
   return (
     <div className="bg-card flex flex-col gap-6 py-6 px-6">
       <div className="text-2xl text-slate-600 uppercase">Your Guesses</div>
-      {/* <div className="text-5xl font-bold-TOM text-yellow-400 flex flex-row items-end gap-4 ">
-          <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-            {showLeaderboard ? (
-              <Trophy size={36} strokeWidth={2} />
-            ) : (
-              <Coins size={36} strokeWidth={2} />
-            )}
-          </span>{" "}
-          {showLeaderboard ? "Top 10" : `Score: `}
-        </div> */}
+      {(!viewer || viewer.score < 10) && (
+        <div className="font-bold-TOM text-slate-600">
+          There are {NUM_MATCHES} target words to guess. If you guess the best
+          word correctly, you get {NUM_MATCHES} points. If you guess the second
+          word correctly, you get {NUM_MATCHES - 1} points. And so on.
+        </div>
+      )}
       <div className="flex flex-col gap-3 text-xl text-yellow-400">
         <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
           <div>Word</div>
