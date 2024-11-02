@@ -7,9 +7,8 @@ import {
   Outlet,
   useRouter,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { ConvexReactClient } from "convex/react";
-import { ReactNode, useEffect, useState } from "react";
+import { lazy, ReactNode, Suspense, useEffect, useState } from "react";
 import { Flipped, Flipper } from "react-flip-toolkit";
 
 const convex = new ConvexReactClient(
@@ -50,6 +49,17 @@ const titles = [
   "Terminology Tango",
   "Etymological Enigma",
 ];
+const TanStackRouterDevtools =
+  process.env.NODE_ENV === "production"
+    ? () => null // Render nothing in production
+    : lazy(() =>
+        // Lazy load in development
+        import("@tanstack/router-devtools").then((res) => ({
+          default: res.TanStackRouterDevtools,
+          // For Embedded Mode
+          // default: res.TanStackRouterDevtoolsPanel
+        })),
+      );
 function Content() {
   const [data, setData] = useState(titles[0]);
   const [circleSwap, setCircleSwap] = useState(false);
@@ -128,7 +138,9 @@ function Content() {
           </div>
         </div>
       </footer>
-      <TanStackRouterDevtools position="bottom-right" />
+      <Suspense>
+        <TanStackRouterDevtools position="bottom-right" />
+      </Suspense>
     </div>
   );
 }
