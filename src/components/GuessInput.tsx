@@ -67,7 +67,7 @@ export function GuessInput({ round }: { round?: RoundInfo }) {
   };
   const hint = "Enter a word whose meaning matches the other two words.";
   return (
-    <>
+    <div className="flex flex-col gap-2">
       <label htmlFor="guess-input" className="invisible hidden">
         {hint}
       </label>
@@ -88,10 +88,10 @@ export function GuessInput({ round }: { round?: RoundInfo }) {
         onChange={(e) =>
           setGuess(e.target.value.replace(" ", "").toLowerCase())
         }
-        className="w-full h-[100px] rounded-md border-0 bg-background px-3 py-2 text-6xl ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-yellow-400"
+        className="w-full h-[50px] md:h-[60px] rounded-md border-0 bg-background px-3 py-2 text-2xl md:text-4xl ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-yellow-400"
       />
       <button
-        className=" bg-white bg-opacity-10 text-4xl py-2 px-4 rounded-md w-full flex flex-row justify-center items-center gap-2"
+        className="bg-white bg-opacity-10 text-xl md:text-4xl py-1 px-3 rounded-md w-full flex flex-row justify-center items-center gap-2"
         disabled={!isAuthenticated}
         onClick={() => {
           makeGuess();
@@ -102,6 +102,6 @@ export function GuessInput({ round }: { round?: RoundInfo }) {
         </span>{" "}
         Place Your Guess
       </button>
-    </>
+    </div>
   );
 }

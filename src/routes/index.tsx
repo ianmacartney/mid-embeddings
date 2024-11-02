@@ -77,8 +77,8 @@ function Round({ round }: { round: RoundInfo | undefined }) {
             </div>
           </div>
         </div>
-        <div className="flex flex-row gap-4 w-full">
-          <div className="w-1/2 flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4 w-full">
+          <div className="w-full md:w-1/2 flex flex-col gap-4">
             {round && guesses?.submittedAt ? (
               <>
                 <RoundLeaderboard round={round} />
@@ -86,29 +86,29 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                 <GlobalStats />
               </>
             ) : (
-              <div className="bg-card flex flex-col gap-6 py-6 px-4">
-                <div className="text-2xl text-slate-600 uppercase">
+              <div className="bg-card flex flex-col gap-3 md:gap-6 py-4 md:py-6 px-4">
+                <div className="text-xl md:text-2xl text-slate-600 uppercase">
                   Let's Play
                 </div>
                 {round?.category && (
-                  <div className="text-5xl text-yellow-400 flex flex-row items-end gap-4 pb-4">
+                  <div className="text-3xl md:text-5xl text-yellow-400 flex flex-row items-end gap-1 md:gap-4 pb-2 md:pb-4">
                     <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-                      <LetterText size={36} strokeWidth={2} />
+                      <LetterText size={24} strokeWidth={2} />
                     </span>{" "}
                     {round?.category}
                   </div>
                 )}
                 {round?.description && (
-                  <div className="text-2xl text-slate-600 whitespace-pre-line">
+                  <div className="text-lg md:text-2xl text-slate-600 whitespace-pre-line">
                     {round?.description}
                   </div>
                 )}
-                <div className="flex flex-col items-start w-full gap-2 font-bold">
-                  <div className="flex flex-col items-start gap-4">
-                    <div className="text-5xl">{round?.left}</div>
-                    <div className="text-5xl opacity-30">+</div>
-                    <div className="text-5xl">{round?.right}</div>
-                    <div className="text-5xl opacity-30">=</div>
+                <div className="flex flex-col items-start w-full gap-1 font-bold">
+                  <div className="flex flex-col items-start gap-1 md:gap-2">
+                    <div className="text-3xl md:text-5xl">{round?.left}</div>
+                    <div className="text-3xl md:text-5xl opacity-30">+</div>
+                    <div className="text-3xl md:text-5xl">{round?.right}</div>
+                    <div className="text-3xl md:text-5xl opacity-30">=</div>
 
                     <GuessInput round={round} />
                   </div>
@@ -117,7 +117,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
             )}
           </div>
 
-          <div className="w-1/2 flex flex-col gap-4">
+          <div className="w-full md:w-1/2 flex flex-col gap-4">
             {guesses ? (
               <>
                 <RoundStats guesses={guesses} />
@@ -278,29 +278,35 @@ function RoundLeaderboard({ round }: { round: RoundInfo }) {
 function RoundStats({ guesses }: { guesses: Doc<"guesses"> }) {
   const myRank = useQuery(api.round.myRank, { roundId: guesses.roundId });
   return (
-    <div className="bg-card flex flex-col gap-6 py-6 px-4 w-full">
-      <div className="text-2xl text-slate-600 uppercase">Stats</div>
+    <div className="bg-card flex flex-col gap-4 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
+      <div className="text-xl md:text-2xl text-slate-600 uppercase">Stats</div>
       <div className="flex flex-row justify-start items-start">
-        <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
-          <div className="flex flex-row items-end gap-4">
+        <div className="text-3xl md:text-5xl text-yellow-400 flex flex-col items-start gap-1 w-1/2">
+          <div className="flex flex-row items-end gap-2 md:gap-4">
             <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-              <Award size={36} strokeWidth={2} />
+              <Award size={24} strokeWidth={2} className="md:w-9 md:h-9" />
             </span>{" "}
-            <div className="text-5xl font-bold-TOM">#{myRank ?? "?"}</div>
+            <div className="text-3xl md:text-5xl font-bold-TOM">
+              #{myRank ?? "?"}
+            </div>
           </div>
           <div className="flex flex-row place-self-start">
-            <div className="text-3xl text-card-foreground">rank</div>
+            <div className="text-xl md:text-3xl text-card-foreground">rank</div>
           </div>
         </div>
-        <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
-          <div className="flex flex-row items-end gap-4">
+        <div className="text-3xl md:text-5xl text-yellow-400 flex flex-col items-start gap-1 w-1/2">
+          <div className="flex flex-row items-end gap-2 md:gap-4">
             <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-              <Gem size={36} strokeWidth={2} />
+              <Gem size={24} strokeWidth={2} className="md:w-9 md:h-9" />
             </span>{" "}
-            <div className="text-5xl font-bold-TOM">{guesses.score}</div>
+            <div className="text-3xl md:text-5xl font-bold-TOM">
+              {guesses.score}
+            </div>
           </div>
           <div className="flex flex-row place-self-start">
-            <div className="text-3xl text-card-foreground">score</div>
+            <div className="text-xl md:text-3xl text-card-foreground">
+              score
+            </div>
           </div>
         </div>
       </div>
