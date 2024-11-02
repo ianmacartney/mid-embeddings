@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Code } from "@/components/Code";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { api } from "@convex/_generated/api";
@@ -15,16 +15,36 @@ function Author() {
   return (
     <div className="flex flex-col gap-2 items-center min-h-full overflow-scroll bg-background text-foreground">
       <h2>Namespaces</h2>
-      {namespaces.map((namespace) => (
-        <Link key={namespace._id} to={`/author/${namespace.slug}`}>
-          <Button>
-            <>
-              {namespace.name} ({namespace.slug}) -{" "}
-              <i>{namespace.public ? "public" : "private"}</i>
-            </>
-          </Button>
-        </Link>
-      ))}
+      <div className="grid grid-cols-6 gap-4 w-full max-w-7xl px-4">
+        {namespaces.map((namespace) => (
+          <Link
+            key={namespace._id}
+            to={`/author/${namespace.slug}`}
+            className="block"
+          >
+            <div className="h-full p-4 rounded-lg border border-border hover:border-primary transition-colors bg-card">
+              <h3 className="font-semibold truncate">{namespace.name}</h3>
+              <p className="text-muted-foreground truncate">
+                <Code className="text-xs">/{namespace.slug}</Code>
+              </p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {namespace.description}
+              </p>
+              <div className="mt-2">
+                <span
+                  className={`text-xs px-2 py-1 rounded-full ${
+                    namespace.public
+                      ? "bg-green-100 text-green-800"
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}
+                >
+                  {namespace.public ? "Public" : "Private"}
+                </span>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
       <form>
         <Input
           type="text"
