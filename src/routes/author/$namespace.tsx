@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { FunctionReturnType } from "convex/server";
-import { Cross1Icon, TrashIcon } from "@radix-ui/react-icons";
+import { TrashIcon } from "@radix-ui/react-icons";
 import { chunk } from "@/lib/utils";
 import type { Strategy } from "@convex/namespace";
 import {

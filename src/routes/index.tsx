@@ -276,7 +276,7 @@ function RoundStats({ guesses }: { guesses: Doc<"guesses"> }) {
             <div className="text-5xl font-bold-TOM">#{myRank ?? "?"}</div>
           </div>
           <div className="flex flex-row place-self-start">
-            <div className="text-3xl text-card-foreground">your rank</div>
+            <div className="text-3xl text-card-foreground">rank</div>
           </div>
         </div>
         <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
