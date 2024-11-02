@@ -40,7 +40,13 @@ const rate = new RateLimiter(components.ratelimiter, {
     shards: 10,
   },
   basicSearch: { kind: "token bucket", period: SECOND, rate: 1, capacity: 5 },
-  midSearch: { kind: "token bucket", period: SECOND, rate: 5 },
+  midSearch: {
+    kind: "token bucket",
+    period: SECOND,
+    rate: 5,
+    capacity: 20,
+    shards: 3,
+  },
 });
 
 export const listNamespaces = userQuery({
