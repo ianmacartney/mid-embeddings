@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { api } from "@convex/_generated/api";
 import { RoundInfo } from "@convex/round";
+import { MAX_ATTEMPTS } from "@convex/shared";
 import { useConvex, useConvexAuth, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import { CornerDownRight } from "lucide-react";
@@ -66,6 +67,10 @@ export function GuessInput({ round }: { round?: RoundInfo }) {
       });
   };
   const hint = "Enter a word whose meaning matches the other two words.";
+  const disabled =
+    guessing ||
+    !isAuthenticated ||
+    (guesses?.attempts.length ?? 0) >= MAX_ATTEMPTS;
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor="guess-input" className="invisible hidden">
@@ -77,7 +82,7 @@ export function GuessInput({ round }: { round?: RoundInfo }) {
         type="text"
         title={hint}
         placeholder="???"
-        disabled={guessing || !isAuthenticated}
+        disabled={disabled}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -92,7 +97,7 @@ export function GuessInput({ round }: { round?: RoundInfo }) {
       />
       <button
         className="bg-white bg-opacity-10 text-xl md:text-4xl py-1 px-3 rounded-md w-full flex flex-row justify-center items-center gap-2"
-        disabled={!isAuthenticated}
+        disabled={disabled}
         onClick={() => {
           makeGuess();
         }}
