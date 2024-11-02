@@ -273,52 +273,9 @@ function Namespace() {
             </div>
 
             <div className="flex flex-col justify-between gap-4">
-              <div className="flex flex-col justify-center gap-2">
-                <span className="text-3xl font-bold">Midpoints</span>
-                <div className="flex flex-wrap gap-2">
-                  {midpoints.results.map((midpoint) => (
-                    <div key={midpoint._id} className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setWords((words) => ({
-                            ...words,
-                            left: midpoint.left,
-                            right: midpoint.right,
-                          }));
-                        }}
-                      >
-                        {midpoint.left} - {midpoint.right}
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          convex
-                            .mutation(fn.deleteMidpoint, {
-                              namespace,
-                              midpointId: midpoint._id,
-                            })
-                            .catch((e) =>
-                              toast({
-                                title: "Error deleting midpoint",
-                                description: e.message,
-                              }),
-                            );
-                        }}
-                      >
-                        <TrashIcon />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                {midpoints.status === "CanLoadMore" && (
-                  <Button onClick={() => midpoints.loadMore(10)}>
-                    Load more
-                  </Button>
-                )}
-              </div>
               <div className="flex flex-col items-center gap-2">
                 <span className="text-3xl font-bold">Rounds</span>
-                <div className="flex flex-col justify-center gap-2">
+                <div className="flex flex-wrap gap-2">
                   {[...rounds].reverse().map((round) => (
                     <div key={round._id} className="flex gap-2">
                       <Button
@@ -374,6 +331,49 @@ function Namespace() {
                       ))}
                     </ol>
                   </div>
+                )}
+              </div>
+              <div className="flex flex-col justify-center gap-2">
+                <span className="text-3xl font-bold">Midpoints</span>
+                <div className="flex flex-wrap gap-2">
+                  {midpoints.results.map((midpoint) => (
+                    <div key={midpoint._id} className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setWords((words) => ({
+                            ...words,
+                            left: midpoint.left,
+                            right: midpoint.right,
+                          }));
+                        }}
+                      >
+                        {midpoint.left} - {midpoint.right}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          convex
+                            .mutation(fn.deleteMidpoint, {
+                              namespace,
+                              midpointId: midpoint._id,
+                            })
+                            .catch((e) =>
+                              toast({
+                                title: "Error deleting midpoint",
+                                description: e.message,
+                              }),
+                            );
+                        }}
+                      >
+                        <TrashIcon />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                {midpoints.status === "CanLoadMore" && (
+                  <Button onClick={() => midpoints.loadMore(10)}>
+                    Load more
+                  </Button>
                 )}
               </div>
             </div>
