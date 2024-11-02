@@ -99,7 +99,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   </div>
                 )}
                 {round?.description && (
-                  <div className="text-lg md:text-2xl text-slate-600 whitespace-pre-line">
+                  <div className="text-lg md:text-2xl text-muted-foreground whitespace-pre-line">
                     {round?.description}
                   </div>
                 )}
@@ -336,7 +336,7 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
         Your Guesses
       </div>
       {(!viewer || viewer.score < 10) && (
-        <div className="font-bold-TOM text-slate-600">
+        <div className="font-bold-TOM text-muted-foreground">
           There are {NUM_MATCHES} target words to guess. If you guess the best
           word correctly, you get {NUM_MATCHES} points. If you guess the second
           word correctly, you get {NUM_MATCHES - 1} points. And so on.
