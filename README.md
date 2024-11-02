@@ -1,4 +1,6 @@
-# Mid Embeddings
+# Mid: A guessing game with embeddings
+
+![Mid screenshot](./screenshot.png)
 
 This explores the midpoint of embeddings using centroid, reciprocal rank fusion, and more.
 

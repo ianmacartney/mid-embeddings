@@ -1,5 +1,17 @@
 {
-  "name": "mid",
+  "name": "mid-embeddings",
+  "description": "A guessing game with embeddings",
+  "tags": [
+    "embeddings",
+    "game",
+    "convex",
+    "ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ianmacartney/mid-embeddings.git"
+  },
+  "homepage": "https://labs.convex.dev/mid-embeddings",
   "private": true,
   "version": "0.0.0",
   "type": "module",
