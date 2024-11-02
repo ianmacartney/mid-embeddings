@@ -86,14 +86,14 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                 <GlobalStats />
               </>
             ) : (
-              <div className="bg-card flex flex-col gap-2 md:gap-6 py-3 md:py-6 px-3 md:px-4">
+              <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
                 <div className="text-xl md:text-2xl text-slate-600 uppercase">
                   Let's Play
                 </div>
                 {round?.category && (
-                  <div className="text-3xl md:text-5xl text-yellow-400 flex flex-row items-end gap-1 md:gap-4 pb-1 md:pb-4">
+                  <div className="text-3xl md:text-5xl text-yellow-400 flex flex-row items-center gap-1 md:gap-4 pb-1 md:pb-4">
                     <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-                      <LetterText size={24} strokeWidth={2} />
+                      <LetterText size={36} strokeWidth={2} />
                     </span>{" "}
                     {round?.category}
                   </div>
@@ -104,7 +104,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                   </div>
                 )}
                 <div className="flex flex-col items-start w-full gap-1 font-bold">
-                  <div className="flex flex-col items-start gap-1 md:gap-2">
+                  <div className="flex flex-col items-start md:gap-2">
                     <div className="text-3xl md:text-5xl">{round?.left}</div>
                     <div className="text-3xl md:text-5xl opacity-30">+</div>
                     <div className="text-3xl md:text-5xl">{round?.right}</div>
@@ -140,8 +140,10 @@ function GlobalStats() {
   const overallStats = useQuery(api.users.overallStats);
   const globalStats = useQuery(api.round.globalStats);
   return (
-    <div className="bg-card flex flex-col gap-6 py-6 px-4 w-full">
-      <div className="text-2xl text-slate-600 uppercase">Overall Stats</div>
+    <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
+      <div className="text-xl md:text-2xl text-slate-600 uppercase">
+        Overall Stats
+      </div>
       <div className="flex flex-row justify-start items-start">
         <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
           <div className="flex flex-row items-end gap-4">
@@ -177,13 +179,13 @@ function GlobalStats() {
 function GlobalLeaderboard() {
   const globalStats = useQuery(api.round.globalStats);
   return (
-    // <div className="bg-card flex flex-col gap-6 py-6 px-6">
+    // <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
     //   <div className="flex flex-row gap-4 w-full">
     <>
       {/* </div>
       <div className="flex flex-row gap-4 w-full"> */}
-      <div className="bg-card flex flex-col gap-6 py-6 px-4 w-full">
-        <div className="text-2xl text-slate-600 uppercase">
+      <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
+        <div className="text-xl md:text-2xl text-slate-600 uppercase">
           Global Leaderboard
         </div>
         {/* <div className="text-5xl font-bold-TOM text-yellow-400 flex flex-row items-end gap-4 ">
@@ -228,13 +230,15 @@ function GlobalLeaderboard() {
 function RoundLeaderboard({ round }: { round: RoundInfo }) {
   const globalStats = useQuery(api.round.globalStats);
   return (
-    // <div className="bg-card flex flex-col gap-6 py-6 px-6">
+    // <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
     //   <div className="flex flex-row gap-4 w-full">
     <>
       {/* </div>
       <div className="flex flex-row gap-4 w-full"> */}
-      <div className="bg-card flex flex-col gap-6 py-6 px-4 w-full">
-        <div className="text-2xl text-slate-600 uppercase">Leaderboard</div>
+      <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
+        <div className="text-xl md:text-2xl text-slate-600 uppercase">
+          Leaderboard
+        </div>
         <div className="text-4xl font-bold-TOM text-yellow-400 flex flex-row items-center gap-4">
           <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
             <Trophy size={36} strokeWidth={2} />
@@ -278,13 +282,13 @@ function RoundLeaderboard({ round }: { round: RoundInfo }) {
 function RoundStats({ guesses }: { guesses: Doc<"guesses"> }) {
   const myRank = useQuery(api.round.myRank, { roundId: guesses.roundId });
   return (
-    <div className="bg-card flex flex-col gap-4 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
+    <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
       <div className="text-xl md:text-2xl text-slate-600 uppercase">Stats</div>
       <div className="flex flex-row justify-start items-start">
         <div className="text-3xl md:text-5xl text-yellow-400 flex flex-col items-start gap-1 w-1/2">
           <div className="flex flex-row items-end gap-2 md:gap-4">
             <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-              <Award size={24} strokeWidth={2} className="md:w-9 md:h-9" />
+              <Award size={36} strokeWidth={2} className="md:w-9 md:h-9" />
             </span>{" "}
             <div className="text-3xl md:text-5xl font-bold-TOM">
               #{myRank ?? "?"}
@@ -297,7 +301,7 @@ function RoundStats({ guesses }: { guesses: Doc<"guesses"> }) {
         <div className="text-3xl md:text-5xl text-yellow-400 flex flex-col items-start gap-1 w-1/2">
           <div className="flex flex-row items-end gap-2 md:gap-4">
             <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-              <Gem size={24} strokeWidth={2} className="md:w-9 md:h-9" />
+              <Gem size={36} strokeWidth={2} className="md:w-9 md:h-9" />
             </span>{" "}
             <div className="text-3xl md:text-5xl font-bold-TOM">
               {guesses.score}
@@ -327,8 +331,10 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
     );
   const viewer = useQuery(api.users.viewer);
   return (
-    <div className="bg-card flex flex-col gap-6 py-6 px-6">
-      <div className="text-2xl text-slate-600 uppercase">Your Guesses</div>
+    <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
+      <div className="text-xl md:text-2xl text-slate-600 uppercase">
+        Your Guesses
+      </div>
       {(!viewer || viewer.score < 10) && (
         <div className="font-bold-TOM text-slate-600">
           There are {NUM_MATCHES} target words to guess. If you guess the best
