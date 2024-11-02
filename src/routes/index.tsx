@@ -26,22 +26,23 @@ function Home() {
   }
   return (
     <div className="flex flex-col items-center min-h-screen h-full overflow-scroll bg-background text-foreground">
-      {roundResult?.value &&
-        currentRound &&
-        currentRound.roundId !== roundResult?.value.roundId && (
-          <div className="flex flex-row items-center justify-center gap-4 p-4">
-            <span>There is a new round available to play</span>
-            <Button
-              variant={"secondary"}
-              onClick={() => {
-                setCurrentRound(roundResult.value);
-              }}
-            >
-              Play the latest round
-            </Button>
-          </div>
-        )}
-      <main className="flex flex-col items-center justify-center w-full max-w-4xl gap-8 px-6 py-8">
+      <main className="flex flex-col items-center justify-center w-full max-w-4xl px-6">
+        {roundResult?.value &&
+          currentRound &&
+          currentRound.roundId !== roundResult?.value.roundId && (
+            <div className="flex flex-row items-center justify-center p-8 mb-[-32px]">
+              <Button
+                variant={"default"}
+                size={"lg"}
+                className="text-4xl"
+                onClick={() => {
+                  setCurrentRound(roundResult.value);
+                }}
+              >
+                New round released! Click here to play it.
+              </Button>
+            </div>
+          )}
         <Round round={currentRound ?? roundResult?.value} />
       </main>
     </div>
@@ -58,7 +59,7 @@ function Round({ round }: { round: RoundInfo | undefined }) {
       <main className="flex flex-col items-start justify-center w-full max-w-5xl gap-4 px-6 py-8">
         <div className="flex items-start gap-4">
           <div className="flex flex-col">
-            <div className="flex flex-col gap-1 py-12">
+            <div className="flex flex-col gap-1 pb-12 pt-4">
               <div className="text-3xl text-gray-400 uppercase">
                 How to play
               </div>
