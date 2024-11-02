@@ -272,42 +272,44 @@ function Namespace() {
               <BasicSearch namespace={namespace} text={misc} />
             </div>
 
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-col justify-between gap-4">
               <div className="flex flex-col justify-center gap-2">
                 <span className="text-3xl font-bold">Midpoints</span>
-                {midpoints.results.map((midpoint) => (
-                  <div key={midpoint._id} className="flex gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setWords((words) => ({
-                          ...words,
-                          left: midpoint.left,
-                          right: midpoint.right,
-                        }));
-                      }}
-                    >
-                      {midpoint.left} - {midpoint.right}
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        convex
-                          .mutation(fn.deleteMidpoint, {
-                            namespace,
-                            midpointId: midpoint._id,
-                          })
-                          .catch((e) =>
-                            toast({
-                              title: "Error deleting midpoint",
-                              description: e.message,
-                            }),
-                          );
-                      }}
-                    >
-                      <TrashIcon />
-                    </Button>
-                  </div>
-                ))}
+                <div className="flex flex-wrap gap-2">
+                  {midpoints.results.map((midpoint) => (
+                    <div key={midpoint._id} className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setWords((words) => ({
+                            ...words,
+                            left: midpoint.left,
+                            right: midpoint.right,
+                          }));
+                        }}
+                      >
+                        {midpoint.left} - {midpoint.right}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          convex
+                            .mutation(fn.deleteMidpoint, {
+                              namespace,
+                              midpointId: midpoint._id,
+                            })
+                            .catch((e) =>
+                              toast({
+                                title: "Error deleting midpoint",
+                                description: e.message,
+                              }),
+                            );
+                        }}
+                      >
+                        <TrashIcon />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
                 {midpoints.status === "CanLoadMore" && (
                   <Button onClick={() => midpoints.loadMore(10)}>
                     Load more
