@@ -350,17 +350,18 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
 
         {ranked.map((result) => {
           //const [left, right] = getLR(result);
-          const [css, heat] = result.rank
-            ? result.rank < NUM_MATCHES
-              ? ["text-green-500", "🔥"]
-              : result.rank < 25
-                ? ["", "☀️"]
-                : result.rank < 50
-                  ? ["", "🌤️"]
-                  : result.rank < 75
-                    ? ["", "☁️"]
-                    : ["", "🌧️"]
-            : ["", "🥶"];
+          const [css, heat] =
+            result.rank === undefined
+              ? ["", "🥶"]
+              : result.rank < NUM_MATCHES
+                ? ["text-green-500", "🔥"]
+                : result.rank < 25
+                  ? ["", "☀️"]
+                  : result.rank < 50
+                    ? ["", "🌤️"]
+                    : result.rank < 75
+                      ? ["", "☁️"]
+                      : ["", "🌧️"];
           return (
             <div
               key={result.title}
