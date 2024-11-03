@@ -15,13 +15,14 @@ export const overallStats = userQuery({
       return null;
     }
     const score = user.score ?? 0;
-    const rank = await globalLeaderboard.offsetOf(
-      ctx,
-      [score, -user._creationTime],
-      user._id,
-    );
+    const rank =
+      (await globalLeaderboard.offsetUntil(
+        ctx,
+        [score, -user._creationTime],
+        user._id,
+      )) + 1;
     return {
-      rank: rank + 1,
+      rank,
       score,
     };
   },

@@ -94,7 +94,7 @@ export const myRank = userQuery({
       return Infinity;
     }
     return (
-      (await roundLeaderboard.offsetOf(
+      (await roundLeaderboard.offsetUntil(
         ctx,
         [args.roundId, guess.score, guess.submittedAt ?? Date.now()],
         guess._id,
