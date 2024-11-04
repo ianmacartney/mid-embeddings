@@ -53,7 +53,7 @@ export const globalLeaderboard = new TableAggregate<
   // Sort by score, then by creation time (newest first)
   // So we can find the earliest adopter with the highest score.
   sortKey: (d) => [
-    d.isAnonymous ? d.score / 1000 : d.score ?? 0,
+    d.isAnonymous ? (d.capturedBy ? 0 : d.score / 1000) : d.score ?? 0,
     -d._creationTime,
   ],
   sumValue: (d) => d.score ?? 0,
@@ -61,16 +61,30 @@ export const globalLeaderboard = new TableAggregate<
 triggers.register("users", globalLeaderboard.idempotentTrigger());
 
 triggers.register("guesses", async (ctx, event) => {
-  const delta = (event.newDoc?.score ?? 0) - (event.oldDoc?.score ?? 0);
-  if (delta === 0) {
-    return;
+  const { oldDoc, newDoc } = event;
+  if (newDoc && (!oldDoc || newDoc.userId === oldDoc.userId)) {
+    const delta = newDoc.score - (oldDoc?.score ?? 0);
+    if (delta !== 0) {
+      const user = await getOrThrow(ctx, newDoc.userId);
+      await ctx.db.patch(newDoc.userId, { score: (user.score ?? 0) + delta });
+    }
   }
-  const userId = event.newDoc?.userId;
-  if (!userId) {
-    return;
+  if (oldDoc && !newDoc) {
+    const user = await getOrThrow(ctx, oldDoc.userId);
+    await ctx.db.patch(oldDoc.userId, {
+      score: Math.max(0, (user.score ?? 0) - oldDoc.score),
+    });
   }
-  const user = await getOrThrow(ctx, userId);
-  await ctx.db.patch(userId, { score: (user.score ?? 0) + delta });
+  if (oldDoc && newDoc && oldDoc.userId !== newDoc.userId) {
+    const oldUser = await getOrThrow(ctx, oldDoc.userId);
+    const newUser = await getOrThrow(ctx, newDoc.userId);
+    await ctx.db.patch(oldDoc.userId, {
+      score: Math.max(0, (oldUser.score ?? 0) - oldDoc.score),
+    });
+    await ctx.db.patch(newDoc.userId, {
+      score: (newUser.score ?? 0) + newDoc.score,
+    });
+  }
 });
 
 export const mutation = customMutation(mutationRaw, customCtx(triggers.wrapDB));
