@@ -265,7 +265,9 @@ export const insertGuess = internalMutation({
             t.title === args.title || (rank !== undefined && t.rank === rank),
         )
       ) {
-        throw new ConvexError("Guess already submitted.");
+        throw new ConvexError(
+          "You have already guessed something too similar to this.",
+        );
       }
       if (guess.attempts.length >= MAX_ATTEMPTS) {
         throw new ConvexError("Max attempts reached.");
