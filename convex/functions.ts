@@ -53,7 +53,7 @@ export const globalLeaderboard = new TableAggregate<
   // Sort by score, then by creation time (newest first)
   // So we can find the earliest adopter with the highest score.
   sortKey: (d) => [
-    d.isAnonymous ? (d.capturedBy ? 0 : d.score / 1000) : d.score ?? 0,
+    d.isAnonymous ? (d.capturedBy ? 0 : (d.score ?? 0) / 1000) : d.score ?? 0,
     -d._creationTime,
   ],
   sumValue: (d) => d.score ?? 0,
