@@ -27,7 +27,7 @@
   "dependencies": {
     "@auth/core": "^0.36.0",
     "@convex-dev/action-cache": "^0.2.0",
-    "@convex-dev/aggregate": "^0.1.15",
+    "@convex-dev/aggregate": "^0.1.16-alpha.0",
     "@convex-dev/auth": "^0.0.72",
     "@convex-dev/crons": "^0.1.3",
     "@convex-dev/migrations": "^0.1.6",

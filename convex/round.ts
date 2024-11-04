@@ -94,11 +94,14 @@ export const myRank = userQuery({
       return Infinity;
     }
     return (
-      (await roundLeaderboard.offsetUntil(
+      (await roundLeaderboard.indexOf(
         ctx,
         [args.roundId, guess.score, guess.submittedAt ?? Date.now()],
-        guess._id,
-        { prefix: [args.roundId] },
+        {
+          id: guess._id,
+          bounds: { prefix: [args.roundId] },
+          order: "desc",
+        },
       )) + 1
     );
   },
