@@ -81,9 +81,8 @@ function Round({ round }: { round: RoundInfo | undefined }) {
           <div className="w-full md:w-1/2 flex flex-col gap-2 md:gap-4">
             {round && guesses?.submittedAt ? (
               <>
-                <RoundLeaderboard round={round} />
-                <GlobalLeaderboard />
                 <GlobalStats />
+                <GlobalLeaderboard />
               </>
             ) : (
               <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
@@ -121,6 +120,9 @@ function Round({ round }: { round: RoundInfo | undefined }) {
             {guesses ? (
               <>
                 <RoundStats guesses={guesses} />
+                {round && guesses.submittedAt && (
+                  <RoundLeaderboard round={round} />
+                )}
                 <Guesses guesses={guesses} />
               </>
             ) : (
@@ -168,7 +170,7 @@ function GlobalStats() {
             </div>
           </div>
           <div className="flex flex-row place-self-start">
-            <div className="text-3xl text-card-foreground">your rank</div>
+            <div className="text-3xl text-card-foreground">overall rank</div>
           </div>
         </div>
       </div>
@@ -177,6 +179,7 @@ function GlobalStats() {
 }
 
 function GlobalLeaderboard() {
+  const viewer = useQuery(api.users.viewer);
   const globalStats = useQuery(api.round.globalStats);
   return (
     // <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
@@ -186,7 +189,7 @@ function GlobalLeaderboard() {
       <div className="flex flex-row gap-4 w-full"> */}
       <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
         <div className="text-xl md:text-2xl text-slate-600 uppercase">
-          Global Leaderboard
+          Overall Leaderboard
         </div>
         {/* <div className="text-5xl font-bold-TOM text-yellow-400 flex flex-row items-end gap-4 ">
           <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
@@ -206,7 +209,10 @@ function GlobalLeaderboard() {
             return (
               <div
                 key={user.id}
-                className="flex flex-row justify-start gap-2 text-primary"
+                className={cn(
+                  "flex flex-row justify-start gap-2 text-primary",
+                  viewer?._id === user.id && "text-green-500",
+                )}
               >
                 <Code className="w-10">
                   <span className="text-xl">{i + 1}</span>
@@ -228,6 +234,7 @@ function GlobalLeaderboard() {
   );
 }
 function RoundLeaderboard({ round }: { round: RoundInfo }) {
+  const viewer = useQuery(api.users.viewer);
   const roundStats = useQuery(api.round.roundStats, { roundId: round.roundId });
   return (
     // <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
@@ -237,7 +244,7 @@ function RoundLeaderboard({ round }: { round: RoundInfo }) {
       <div className="flex flex-row gap-4 w-full"> */}
       <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
         <div className="text-xl md:text-2xl text-slate-600 uppercase">
-          Leaderboard
+          Round Leaderboard
         </div>
         <div className="text-4xl font-bold-TOM text-yellow-400 flex flex-row items-center gap-4">
           <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
@@ -257,7 +264,10 @@ function RoundLeaderboard({ round }: { round: RoundInfo }) {
             return (
               <div
                 key={user.id}
-                className="flex flex-row justify-start gap-2 text-primary"
+                className={cn(
+                  "flex flex-row justify-start gap-2 text-primary",
+                  viewer?._id === user.id && "text-green-500",
+                )}
               >
                 <Code className="w-10">
                   <span className="text-xl">{i + 1}</span>
@@ -283,7 +293,9 @@ function RoundStats({ guesses }: { guesses: Doc<"guesses"> }) {
   const myRank = useQuery(api.round.myRank, { roundId: guesses.roundId });
   return (
     <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
-      <div className="text-xl md:text-2xl text-slate-600 uppercase">Stats</div>
+      <div className="text-xl md:text-2xl text-slate-600 uppercase">
+        Round Stats
+      </div>
       <div className="flex flex-row justify-start items-start">
         <div className="text-3xl md:text-5xl text-yellow-400 flex flex-col items-start gap-1 w-1/2">
           <div className="flex flex-row items-end gap-2 md:gap-4">

@@ -328,18 +328,17 @@ export const globalStats = query({
     );
     const leaders = await Promise.all(
       results.page.map(async (leader) => {
-        const user = await getOrThrow(ctx, leader.id);
-        if (user.isAnonymous) {
-          return {
-            score: leader.sumValue,
-            name: "Anonymous",
-            id: leader.id,
-          };
+        const user = await ctx.db.get(leader.id);
+        let name = "Anonymous";
+        if (!user) {
+          name = "(deleted)";
+        } else if (!user.isAnonymous) {
+          name = user.name;
         }
         return {
+          name,
           score: leader.sumValue,
-          id: leader.id,
-          name: user.name,
+          id: user?._id,
         };
       }),
     );
@@ -374,7 +373,7 @@ export const roundStats = query({
         return {
           name,
           score: leader.sumValue,
-          id: leader.id,
+          id: user?._id,
         };
       }),
     );
