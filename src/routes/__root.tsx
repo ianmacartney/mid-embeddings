@@ -1,13 +1,16 @@
 import { Toaster } from "@/components/ui/toaster";
 import { UserMenu } from "@/components/UserMenu";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { api } from "@convex/_generated/api";
 import {
   createRootRoute,
   Link,
   Outlet,
+  useNavigate,
   useRouter,
+  useSearch,
 } from "@tanstack/react-router";
-import { ConvexReactClient } from "convex/react";
+import { ConvexReactClient, useConvexAuth } from "convex/react";
 import { lazy, ReactNode, Suspense, useEffect, useState } from "react";
 import { Flipped, Flipper } from "react-flip-toolkit";
 
@@ -18,6 +21,11 @@ const convex = new ConvexReactClient(
 
 export const Route = createRootRoute({
   component: App,
+  validateSearch: (search) => {
+    return {
+      anonymousId: search.anonymousId,
+    } as { anonymousId?: string };
+  },
 });
 
 function App() {
@@ -27,6 +35,7 @@ function App() {
       client={convex}
       replaceURL={(to) => router.navigate({ to, replace: true })}
     >
+      <CaptureSession />
       <Content />
     </ConvexAuthProvider>
   );
@@ -154,4 +163,18 @@ function FooterLink({ href, children }: { href: string; children: ReactNode }) {
       {children}
     </a>
   );
+}
+
+function CaptureSession() {
+  const { anonymousId } = useSearch({ from: Route.id });
+  const { isAuthenticated } = useConvexAuth();
+  const navigate = useNavigate({ from: Route.fullPath });
+  useEffect(() => {
+    if (anonymousId && isAuthenticated) {
+      void convex.mutation(api.users.captureSession, { anonymousId });
+      // clear the search param
+      void navigate({ search: ({ anonymousId: _, ...prev }) => ({ ...prev }) });
+    }
+  }, [anonymousId, isAuthenticated, navigate]);
+  return null;
 }

@@ -14,6 +14,7 @@ const schema = defineSchema({
       v.object({
         isAnonymous: v.literal(true),
         score: pretendRequired(v.number()),
+        capturedBy: v.optional(v.id("users")),
       }),
       v.object({
         isAnonymous: v.literal(false),

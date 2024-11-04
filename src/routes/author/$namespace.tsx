@@ -1,6 +1,7 @@
 import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  Authenticated,
   useAction,
   useConvex,
   useMutation,
@@ -27,7 +28,11 @@ import { Doc, Id } from "@convex/_generated/dataModel";
 import { MAX_MATCH_RANK } from "@convex/shared";
 
 export const Route = createFileRoute("/author/$namespace")({
-  component: Category,
+  component: () => (
+    <Authenticated>
+      <Category />
+    </Authenticated>
+  ),
 });
 
 const fn = api.namespace;

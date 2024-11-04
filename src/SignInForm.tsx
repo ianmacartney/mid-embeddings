@@ -6,6 +6,8 @@ import { toast } from "./components/ui/use-toast";
 import dayjs from "dayjs";
 import { ComponentProps } from "react";
 import { isRateLimitError } from "@convex-dev/ratelimiter";
+import { useConvex } from "convex/react";
+import { api } from "@convex/_generated/api";
 
 export function SignInForm() {
   return (
@@ -26,12 +28,20 @@ export function SignInForm() {
 
 export function SignInWithGitHub(props: ComponentProps<"button">) {
   const { signIn } = useAuthActions();
+  const convex = useConvex();
   return (
     <Button
       variant="outline"
       type="button"
       onClick={() =>
-        void signIn("github", { redirectTo: window.location.href })
+        void (async () => {
+          const loginUrl = new URL(window.location.href);
+          const anonymousId = await convex.query(api.users.getAnonymousId);
+          if (anonymousId) {
+            loginUrl.searchParams.set("anonymousId", anonymousId);
+          }
+          await signIn("github", { redirectTo: loginUrl.toString() });
+        })()
       }
       {...props}
     >
