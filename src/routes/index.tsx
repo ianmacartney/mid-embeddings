@@ -140,26 +140,12 @@ function Round({ round }: { round: RoundInfo | undefined }) {
 
 function GlobalStats() {
   const overallStats = useQuery(api.users.overallStats);
-  const globalStats = useQuery(api.round.globalStats);
   return (
     <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
       <div className="text-xl md:text-2xl text-slate-600 uppercase">
         Overall Stats
       </div>
       <div className="flex flex-row justify-start items-start">
-        <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
-          <div className="flex flex-row items-end gap-4">
-            <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-              <Earth size={36} strokeWidth={2} />
-            </span>{" "}
-            <div className="text-5xl font-bold-TOM">
-              {globalStats?.totalGuesses ?? "0"}
-            </div>
-          </div>
-          <div className="flex flex-row place-self-start">
-            <div className="text-3xl text-card-foreground">total guesses</div>
-          </div>
-        </div>
         <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
           <div className="flex flex-row items-end gap-4">
             <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
@@ -170,7 +156,20 @@ function GlobalStats() {
             </div>
           </div>
           <div className="flex flex-row place-self-start">
-            <div className="text-3xl text-card-foreground">overall rank</div>
+            <div className="text-3xl text-card-foreground">rank</div>
+          </div>
+        </div>
+        <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1 w-1/2">
+          <div className="flex flex-row items-end gap-4">
+            <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
+              <Gem size={36} strokeWidth={2} />
+            </span>{" "}
+            <div className="text-5xl font-bold-TOM">
+              {overallStats?.score ?? "?"}
+            </div>
+          </div>
+          <div className="flex flex-row place-self-start">
+            <div className="text-3xl text-card-foreground">score</div>
           </div>
         </div>
       </div>
@@ -209,15 +208,14 @@ function GlobalLeaderboard() {
             return (
               <div
                 key={user.id}
-                className={cn(
-                  "flex flex-row justify-start gap-2 text-primary",
-                  viewer?._id === user.id && "text-green-500",
-                )}
+                className="flex flex-row justify-start gap-2 text-primary"
               >
                 <Code className="w-10">
                   <span className="text-xl">{i + 1}</span>
                 </Code>
-                <Code>
+                <Code
+                  className={cn(viewer?._id === user.id && "text-yellow-400")}
+                >
                   <span className="text-xl">{user.name}</span>
                 </Code>
                 <Code className="ml-auto">
@@ -227,7 +225,21 @@ function GlobalLeaderboard() {
             );
           })}
         </div>
+        <div className="text-5xl  text-yellow-400 flex flex-col items-start gap-1">
+          <div className="flex flex-row items-end gap-4">
+            <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
+              <Earth size={36} strokeWidth={2} />
+            </span>{" "}
+            <div className="text-5xl font-bold-TOM">
+              {globalStats?.totalGuesses ?? "0"}
+            </div>
+          </div>
+          <div className="flex flex-row place-self-start">
+            <div className="text-3xl text-card-foreground">guesses</div>
+          </div>
+        </div>
       </div>
+
       {/* </div> */}
       {/* </div> */}
     </>
@@ -264,15 +276,14 @@ function RoundLeaderboard({ round }: { round: RoundInfo }) {
             return (
               <div
                 key={user.id}
-                className={cn(
-                  "flex flex-row justify-start gap-2 text-primary",
-                  viewer?._id === user.id && "text-green-500",
-                )}
+                className="flex flex-row justify-start gap-2 text-primary"
               >
                 <Code className="w-10">
                   <span className="text-xl">{i + 1}</span>
                 </Code>
-                <Code>
+                <Code
+                  className={cn(viewer?._id === user.id && "text-yellow-400")}
+                >
                   <span className="text-xl">{user.name}</span>
                 </Code>
                 <Code className="ml-auto">
