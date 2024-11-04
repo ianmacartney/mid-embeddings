@@ -1,12 +1,14 @@
 import { Code } from "@/components/Code";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
+import { SignInForm } from "@/SignInForm";
 import { api } from "@convex/_generated/api";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
 
 export const Route = createFileRoute("/author/")({
   component: Author,
+  errorComponent: () => <SignInForm />,
 });
 
 function Author() {

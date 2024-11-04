@@ -2,6 +2,7 @@ import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Authenticated,
+  Unauthenticated,
   useAction,
   useConvex,
   useMutation,
@@ -26,12 +27,18 @@ import {
 } from "@/components/ui/select";
 import { Doc, Id } from "@convex/_generated/dataModel";
 import { MAX_MATCH_RANK } from "@convex/shared";
+import { SignInForm } from "@/SignInForm";
 
 export const Route = createFileRoute("/author/$namespace")({
   component: () => (
-    <Authenticated>
-      <Category />
-    </Authenticated>
+    <>
+      <Unauthenticated>
+        <SignInForm />
+      </Unauthenticated>
+      <Authenticated>
+        <Category />
+      </Authenticated>
+    </>
   ),
 });
 

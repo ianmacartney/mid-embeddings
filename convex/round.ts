@@ -351,6 +351,41 @@ export const globalStats = query({
   },
 });
 
+export const roundStats = query({
+  args: { roundId: v.id("rounds") },
+  handler: async (ctx, args) => {
+    const results = await roundLeaderboard.paginate(
+      ctx,
+      { prefix: [args.roundId] },
+      undefined,
+      "desc",
+      10,
+    );
+    const leaders = await Promise.all(
+      results.page.map(async (leader) => {
+        const guess = await getOrThrow(ctx, leader.id);
+        const user = await ctx.db.get(guess.userId);
+        let name = "Anonymous";
+        if (!user) {
+          name = "(deleted)";
+        } else if (!user.isAnonymous) {
+          name = user.name;
+        }
+        return {
+          name,
+          score: leader.sumValue,
+          id: leader.id,
+        };
+      }),
+    );
+
+    return {
+      totalGuesses: await counter.count(ctx, "guesses:total"),
+      leaders,
+    };
+  },
+});
+
 export const addOldGuesses = migrations.define({
   table: "guesses",
   customRange: (query) =>

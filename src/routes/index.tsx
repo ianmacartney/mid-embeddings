@@ -228,7 +228,7 @@ function GlobalLeaderboard() {
   );
 }
 function RoundLeaderboard({ round }: { round: RoundInfo }) {
-  const globalStats = useQuery(api.round.globalStats);
+  const roundStats = useQuery(api.round.roundStats, { roundId: round.roundId });
   return (
     // <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
     //   <div className="flex flex-row gap-4 w-full">
@@ -252,7 +252,7 @@ function RoundLeaderboard({ round }: { round: RoundInfo }) {
             <div className="ml-auto">Score</div>
           </div>
 
-          {globalStats?.leaders.map((user, i) => {
+          {roundStats?.leaders.map((user, i) => {
             //const [left, right] = getLR(result);
             return (
               <div
