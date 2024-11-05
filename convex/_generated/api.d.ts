@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as daily from "../daily.js";
 import type * as embed from "../embed.js";
 import type * as functions from "../functions.js";
 import type * as http from "../http.js";
@@ -35,6 +36,7 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  daily: typeof daily;
   embed: typeof embed;
   functions: typeof functions;
   http: typeof http;

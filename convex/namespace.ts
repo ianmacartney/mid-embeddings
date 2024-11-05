@@ -741,6 +741,7 @@ export const makeRound = namespaceAdminMutation({
     left: v.string(),
     right: v.string(),
     titles: v.array(v.string()),
+    previousRoundId: v.optional(v.id("rounds")),
   },
   handler: async (ctx, args): Promise<Id<"rounds">> => {
     const matches = await Promise.all(
@@ -751,13 +752,46 @@ export const makeRound = namespaceAdminMutation({
           return nullThrows(text).embeddingId;
         }),
     );
-    return ctx.db.insert("rounds", {
+    let previousRound: Doc<"rounds"> | undefined = undefined;
+    if (args.previousRoundId) {
+      previousRound = await getOrThrow(ctx, args.previousRoundId);
+    } else {
+      const activeRound = await ctx.db
+        .query("rounds")
+        .withIndex("active", (q) => q.eq("active", true))
+        .first();
+      if (activeRound) {
+        // insert ourselves at the end of the chain, after existing ones that haven't been done.
+        previousRound = activeRound;
+        while (previousRound && previousRound.nextRoundId) {
+          if (previousRound.nextRoundId === activeRound._id) {
+            // the full chain hasn't been done yet, add at the end
+            break;
+          }
+          const candidate: Doc<"rounds"> = await getOrThrow(
+            ctx,
+            previousRound.nextRoundId,
+          );
+          if (candidate.endedAt) {
+            // The next one has been done, let's add ourselves before it.
+            break;
+          }
+          previousRound = candidate;
+        }
+      }
+    }
+    const nextRoundId = await ctx.db.insert("rounds", {
       left: args.left,
       right: args.right,
       namespaceId: ctx.namespace._id,
       active: false,
       matches,
+      nextRoundId: previousRound?.nextRoundId ?? undefined,
     });
+    if (previousRound) {
+      await ctx.db.patch(previousRound._id, { nextRoundId });
+    }
+    return nextRoundId;
   },
 });
 

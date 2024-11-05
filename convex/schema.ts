@@ -91,9 +91,9 @@ const schema = defineSchema({
     right: v.string(),
     matches: v.array(v.id("embeddings")),
     active: v.boolean(),
-    // scheduledStarterId: v.id("_scheduled_functions"),
-    // start: v.optional(v.number()),
-    // end: v.optional(v.number()),
+    nextRoundId: v.optional(v.id("rounds")),
+    startedAt: v.optional(v.number()),
+    endedAt: v.optional(v.number()),
 
     // can drop namespace, since it'll be global. maybe to be replaced by something else?
   })
