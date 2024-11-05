@@ -71,8 +71,12 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                 How to play
               </div>
               <div className="text-3xl">
-                Guess the words that match the two target words. Try to find all{" "}
-                {NUM_MATCHES} top words!
+                Guess the words that best match the meaning of the two words
+                provided, guessing one word at a time. There are {NUM_MATCHES}{" "}
+                target words to guess. If you guess the best word correctly, you
+                get {NUM_MATCHES} points. If you guess the second word
+                correctly, you get {NUM_MATCHES - 1} points. And so on. You get{" "}
+                {MAX_ATTEMPTS} guesses.
               </div>
             </div>
           </div>
@@ -352,19 +356,11 @@ function Guesses({ guesses }: { guesses: Doc<"guesses"> }) {
     .sort((a, b) =>
       a.points !== b.points ? b.points - a.points : a.index - b.index,
     );
-  const viewer = useQuery(api.users.viewer);
   return (
     <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
       <div className="text-xl md:text-2xl text-slate-600 uppercase">
         Your Guesses
       </div>
-      {(!viewer || viewer.score < 10) && (
-        <div className="font-bold-TOM text-muted-foreground">
-          There are {NUM_MATCHES} target words to guess. If you guess the best
-          word correctly, you get {NUM_MATCHES} points. If you guess the second
-          word correctly, you get {NUM_MATCHES - 1} points. And so on.
-        </div>
-      )}
       <div className="flex flex-col gap-3 text-xl text-yellow-400">
         <div className="flex flex-row justify-between text-xl text-yellow-400 uppercase">
           <div>Word</div>

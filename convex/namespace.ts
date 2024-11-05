@@ -238,7 +238,6 @@ export const listMidpoints = namespaceUserQuery({
     const results = await ctx.db
       .query("midpoints")
       .withIndex("namespaceId", (q) => q.eq("namespaceId", ctx.namespace._id))
-      .order("desc")
       .paginate(args.paginationOpts);
     return {
       ...results,
