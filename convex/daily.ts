@@ -42,6 +42,7 @@ export const startNextRound = internalMutation({
       return;
     }
     for (const round of rounds) {
+      console.log("Ending round", { round });
       await ctx.db.patch(round._id, { active: false, endedAt: Date.now() });
     }
     const patch = { active: true, startedAt: Date.now() };
@@ -60,8 +61,10 @@ export const startNextRound = internalMutation({
           ]),
           ...patch,
         });
+        console.log("Recycling round", { round: nextRound, nextRoundId });
         await ctx.db.patch(round._id, { nextRoundId });
       } else {
+        console.log("Starting round", { round: nextRound });
         await ctx.db.patch(nextRound._id, {
           active: true,
           startedAt: Date.now(),
