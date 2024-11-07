@@ -1,4 +1,4 @@
-import { Infer, v } from "convex/values";
+import { ConvexError, Infer, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import { ActionCtx, DatabaseReader } from "./_generated/server";
@@ -735,7 +735,7 @@ async function getPlusMatches(
   );
 }
 
-export const makeRound = namespaceAdminMutation({
+export const makeRound = namespaceUserMutation({
   args: {
     left: v.string(),
     right: v.string(),
@@ -743,6 +743,12 @@ export const makeRound = namespaceAdminMutation({
     previousRoundId: v.optional(v.id("rounds")),
   },
   handler: async (ctx, args): Promise<Id<"rounds">> => {
+    if (!ctx.user || ctx.user.isAnonymous) {
+      throw new ConvexError("Not logged in.");
+    }
+    if (!ctx.user.isAuthor) {
+      throw new ConvexError("Only authors can create rounds.");
+    }
     const matches = await Promise.all(
       args.titles
         .filter((title) => doesNotInclude(title, [args.left, args.right]))
@@ -779,6 +785,14 @@ export const makeRound = namespaceAdminMutation({
         }
       }
     }
+    if (!ctx.namespace.public) {
+      console.warn(
+        `This category is not public, but user ${ctx.user?._id} ` +
+          `is trying to create a round for it. Not scheduling it.`,
+      );
+      previousRound = undefined;
+    }
+
     const nextRoundId = await ctx.db.insert("rounds", {
       left: args.left,
       right: args.right,

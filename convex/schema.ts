@@ -22,6 +22,7 @@ const schema = defineSchema({
         email: v.string(),
         image: v.string(),
         score: pretendRequired(v.number()),
+        isAuthor: v.optional(v.boolean()),
       }),
     ),
   ),
