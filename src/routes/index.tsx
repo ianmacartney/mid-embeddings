@@ -203,6 +203,7 @@ function GlobalLeaderboard() {
       name: names[i],
       score: "-",
     })),
+    totalGuesses: "351",
   };
   return (
     // <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
