@@ -93,24 +93,25 @@ function Round({ round }: { round: RoundInfo | undefined }) {
                 <div className="text-xl md:text-2xl text-slate-600 uppercase">
                   Let's Play
                 </div>
-                {round?.category && (
-                  <div className="text-3xl md:text-5xl text-yellow-400 flex flex-row items-center gap-1 md:gap-4 pb-1 md:pb-4">
-                    <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
-                      <LetterText size={36} strokeWidth={2} />
-                    </span>{" "}
-                    {round?.category}
-                  </div>
-                )}
-                {round?.description && (
-                  <div className="text-lg md:text-2xl text-muted-foreground whitespace-pre-line">
-                    {round?.description}
-                  </div>
-                )}
+                <div className="text-3xl md:text-5xl text-yellow-400 flex flex-row items-center gap-1 md:gap-4 pb-1 md:pb-4">
+                  <span className="rounded-sm text-slate-900 bg-yellow-400 p-1">
+                    <LetterText size={36} strokeWidth={2} />
+                  </span>{" "}
+                  {round?.category ?? "Category..."}
+                </div>
+                <div className="text-lg md:text-2xl text-muted-foreground whitespace-pre-line">
+                  {round?.description ??
+                    "Very interesting description of the category..."}
+                </div>
                 <div className="flex flex-col items-start w-full gap-1 font-bold">
                   <div className="flex flex-col items-start md:gap-2">
-                    <div className="text-3xl md:text-5xl">{round?.left}</div>
+                    <div className="text-3xl md:text-5xl">
+                      {round?.left ?? "..."}
+                    </div>
                     <div className="text-3xl md:text-5xl opacity-30">+</div>
-                    <div className="text-3xl md:text-5xl">{round?.right}</div>
+                    <div className="text-3xl md:text-5xl">
+                      {round?.right ?? "..."}
+                    </div>
                     <div className="text-3xl md:text-5xl opacity-30">=</div>
 
                     <GuessInput round={round} />
@@ -181,9 +182,28 @@ function GlobalStats() {
   );
 }
 
+const names = [
+  "Alex",
+  "Benny",
+  "Charlie",
+  "Daniel",
+  "Emily",
+  "Fiona",
+  "Gabriel",
+  "Hannah",
+  "Ian",
+  "James",
+];
+
 function GlobalLeaderboard() {
   const viewer = useQuery(api.users.viewer);
-  const globalStats = useQuery(api.round.globalStats);
+  const globalStats = useQuery(api.round.globalStats) ?? {
+    leaders: Array.from({ length: 10 }).map((_, i) => ({
+      id: i.toString(),
+      name: names[i],
+      score: "-",
+    })),
+  };
   return (
     // <div className="bg-card flex flex-col gap-2 md:gap-6 py-4 md:py-6 px-3 md:px-4 w-full">
     //   <div className="flex flex-row gap-4 w-full">
