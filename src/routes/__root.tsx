@@ -14,10 +14,7 @@ import { ConvexReactClient, useConvexAuth } from "convex/react";
 import { lazy, ReactNode, Suspense, useEffect, useState } from "react";
 import { Flipped, Flipper } from "react-flip-toolkit";
 
-const convex = new ConvexReactClient(
-  import.meta.env.VITE_CONVEX_URL as string,
-  { verbose: true },
-);
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
 export const Route = createRootRoute({
   component: App,
