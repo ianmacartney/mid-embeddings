@@ -233,8 +233,8 @@ export const namespaceAdminAction = customAction(action, {
 });
 
 export type Result<T> =
-  | { value: T; error: undefined }
-  | { value: undefined; error: string };
+  | { ok: true; value: T; error: undefined }
+  | { ok: false; value: undefined; error: string };
 
 export function error(message: string) {
   return { ok: false as const, value: undefined, error: message };
