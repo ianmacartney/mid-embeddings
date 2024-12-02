@@ -33,12 +33,14 @@ import { TableAggregate } from "@convex-dev/aggregate";
 
 const triggers = new Triggers<DataModel>();
 
-export const leaderboard = new TableAggregate<
-  [Id<"games">, number],
-  DataModel,
-  "guesses"
->(components.leaderboard, {
-  sortKey: (d) => [d.gameId, d.score],
+export const leaderboard = new TableAggregate<{
+  Namespace: Id<"games">;
+  Key: number;
+  DataModel: DataModel;
+  TableName: "guesses";
+}>(components.leaderboard, {
+  namespace: (d) => d.gameId,
+  sortKey: (d) => d.score,
   sumValue: (d) => d.score,
 });
 triggers.register("guesses", leaderboard.trigger());

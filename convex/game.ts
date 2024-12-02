@@ -111,12 +111,11 @@ export const myRank = userQuery({
     if (!bestGuess) {
       return -1;
     }
-    return leaderboard.offsetOf(
-      ctx,
-      [args.gameId, bestGuess.score],
-      bestGuess._id,
-      { prefix: [args.gameId] },
-    );
+    return leaderboard.indexOf(ctx, bestGuess.score, {
+      id: bestGuess._id,
+      namespace: args.gameId,
+      order: "desc",
+    });
   },
 });
 
